@@ -18,7 +18,7 @@ class Swarm():
         assert constr.shape == (2, dim)
 
         if options is None:
-            self.options = {"mode": 'SPSO2011'}
+            self.options = {"mode": 'SPSO2011', "topology":'global'}
         else:
             self.options = options
 
@@ -34,6 +34,7 @@ class Swarm():
         """
         self.position = np.random.uniform(0, 1, (self.n_particles, self.dim))
         self.velocity = np.random.uniform(0, 1, (self.n_particles, self.dim))
+        self.pbest_position = self.position
         self.pbest = self.func(self.position)
 
     def _use_topology():
@@ -44,20 +45,41 @@ class Swarm():
 
     def compute_gbest(self):
         """Returns the global optimum found by any of the particles."""
-        return np.max(self.pbest)
+        idx = np.argmax(self.pbest)
+        gbest_position = self.pbest_position[idx]
+        gbest = self.pbest[idx]
+        return gbest, gbest_position
 
     def compute_lbest(self):
         """
         Returns the local optimum for each particle depending on the topology
         specified in the options.
         """
-        raise NotImplementedError()
+        if self.options['topology'] == 'global':
+            gbest, gbest_position = self.compute_gbest()
+            ones = np.ones(self.n_particles)
+            return gbest * ones, ones[:, None] @ gbest_position[None, :]  
+        else:
+            raise NotImplementedError()
     
-    def compute_velocity(self):
+    def _velocity_update_SPSO2011(self):
         """
         TODO: docstring, SPSO2011(ZambranoBigiarini2013)
         """
+        lbest = self.compute_lbest()
+        
+
+    def compute_velocity(self):
+        """
+        TODO: docstring
+        """
         if options['mode'] == 'SPSO2011':
-            raise NotImplementedError()
+            _velocity_update_SPSO2011()
         else:
             raise NotImplementedError()
+
+    def update_swarm():
+        """
+        TODO: docstring
+        """
+        raise NotImplementedError()
