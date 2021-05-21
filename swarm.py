@@ -7,6 +7,8 @@ Implementation of the Swarm class for the Particle Swarm Optimization.
 from operations import normal_distribution, uniform_distribution
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 class Swarm():
     """
     TODO: Class docsting
@@ -33,7 +35,7 @@ class Swarm():
         """
         TODO: docstring, Hypercube-sampling
         """
-        self.position = np.random.uniform(0, 1, (self.n_particles, self.dim))
+        self.position = np.random.uniform(2, 20, (self.n_particles, self.dim))
         self.velocity = np.random.uniform(0, 1, (self.n_particles, self.dim))
         self.pbest_position = self.position
         self.pbest = self.func(self.position)
@@ -46,8 +48,8 @@ class Swarm():
 
     def compute_gbest(self):
         """Returns the global optimum found by any of the particles."""
-        idx = np.argmax(self.pbest)
-        gbest_position = self.pbest_position[idx]
+        idx = np.argmin(self.pbest)
+        gbest_position = self.pbest_position[idx, :]
         gbest = self.pbest[idx]
         return gbest, gbest_position
 
@@ -62,7 +64,7 @@ class Swarm():
             return gbest * ones, ones[:, None] @ gbest_position[None, :]  
         else:
             raise NotImplementedError()
-    
+
     def _velocity_update_SPSO2011(self):
         """
         TODO: docstring, SPSO2011(ZambranoBigiarini2013)
@@ -76,34 +78,50 @@ class Swarm():
         U_2 = uniform_distribution(self.n_particles, self.dim)
 
         proj_pbest = self.position + c_1 * U_1 * (self.pbest_position - self.position)
-        proj_lbest = self.position + c_2 * U_2 * (self.lbest_position - self.position) 
+        proj_lbest = self.position + c_2 * U_2 * (lbest_position - self.position) 
 
-        G = (self.position + proj_pbest + proj_lbest) / 3
+        center = (self.position + proj_pbest + proj_lbest) / 3
 
-        radius = np.linalg.norm(G - self.position, axis=1)
+        r = np.linalg.norm(center - self.position, axis=1)
 
-        u = normal_distribution(self.n_particles, self.dim+2)
+        u = np.random.normal(0, 1, (self.n_particles, self.dim+2))
+        u_norm = np.linalg.norm(u, axis=1)
+        u /= u_norm[:,None]
+        u *= r[:,None]
 
-        weighted_draw = radius[:, None]*u # Need to evaluated, not sure if this work right.
-
-        norm = np.sqrt(np.sum(weighted_draw**2))
-
-        weighted_draw = weighted_draw/norm
-
-        rand_sampling = weighted_draw[:,:self.dim]
-
+        offset = u[:,:self.dim]
+        sample_points = center + offset
+        
+        omega = 1 / (2*np.log(2))
+        self.velocity = omega * self.velocity + sample_points - self.position
 
     def compute_velocity(self):
         """
         TODO: docstring
         """
-        if options['mode'] == 'SPSO2011':
-            _velocity_update_SPSO2011()
+        if self.options['mode'] == 'SPSO2011':
+            self._velocity_update_SPSO2011()
         else:
             raise NotImplementedError()
 
-    def update_swarm():
+    def update_swarm(self):
         """
         TODO: docstring
         """
-        raise NotImplementedError()
+        self.compute_velocity()
+        self.position = self.position + self.velocity
+
+        # update pbest
+        func_eval = self.func(self.position)
+
+
+        for idx in range(self.n_particles):
+            if self.pbest[idx] <= func_eval[idx]:
+                continue
+            if self.pbest[idx] > func_eval[idx]:
+                #print('Change')
+                self.pbest[idx] = func_eval[idx]
+                self.pbest_position[idx, :] = self.position[idx, :]
+                #print(self.pbest_position[idx, :])
+
+
