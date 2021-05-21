@@ -4,6 +4,7 @@ author: Hendrik Vater (hvater@mail.upb.de)
 Implementation of the Swarm class for the Particle Swarm Optimization.
 """
 
+from operations import normal_distribution, uniform_distribution
 import numpy as np
 
 class Swarm():
@@ -66,8 +67,31 @@ class Swarm():
         """
         TODO: docstring, SPSO2011(ZambranoBigiarini2013)
         """
-        lbest = self.compute_lbest()
+        lbest, lbest_position = self.compute_lbest()
+        # gbest, gbest_position = self.compute_gbest()
         
+        c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
+       
+        U_1 = uniform_distribution(self.n_particles, self.dim)
+        U_2 = uniform_distribution(self.n_particles, self.dim)
+
+        proj_pbest = self.position + c_1 * U_1 * (self.pbest_position - self.position)
+        proj_lbest = self.position + c_2 * U_2 * (self.lbest_position - self.position) 
+
+        G = (self.position + proj_pbest + proj_lbest) / 3
+
+        radius = np.linalg.norm(G - self.position, axis=1)
+
+        u = normal_distribution(self.n_particles, self.dim+2)
+
+        weighted_draw = radius[:, None]*u # Need to evaluated, not sure if this work right.
+
+        norm = np.sqrt(np.sum(weighted_draw**2))
+
+        weighted_draw = weighted_draw/norm
+
+        rand_sampling = weighted_draw[:,:self.dim]
+
 
     def compute_velocity(self):
         """
