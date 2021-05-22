@@ -37,19 +37,17 @@ class Optimizer():
         # update pbest
         func_eval = self.Swarm.func(self.Swarm.position)
 
-
-        for idx in range(self.Swarm.n_particles):
-            if self.Swarm.pbest[idx] <= func_eval[idx]:
-                continue
-            if self.Swarm.pbest[idx] > func_eval[idx]:
-                #print('Change')
-                self.Swarm.pbest[idx] = func_eval[idx]
-                self.Swarm.pbest_position[idx, :] = self.Swarm.position[idx, :]
-                #print(self.pbest_position[idx, :])
+        bool_decider = self.Swarm.pbest > func_eval
+        self.Swarm.pbest[bool_decider] = func_eval[bool_decider]
+        self.Swarm.pbest_position[bool_decider, :] = self.Swarm.position[bool_decider, :]
 
     def optimize(self):
         """
         TODO: docstring
         """
+        gbest_list = []
         for i in range(self.max_iter):
             self.update_swarm()
+            gbest, gbest_position = self.Swarm.compute_gbest()
+            gbest_list.append(gbest)
+        return gbest_list
