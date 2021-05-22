@@ -1,13 +1,9 @@
-"""
-author: Hendrik Vater (hvater@mail.upb.de)
+"""Implementation of the Swarm class for the Particle Swarm Optimization."""
 
-Implementation of the Swarm class for the Particle Swarm Optimization.
-"""
-
-from operations import normal_distribution, uniform_distribution
 import numpy as np
 
-import matplotlib.pyplot as plt
+from operations import normal_distribution, uniform_distribution
+
 
 class Swarm():
     """
@@ -103,25 +99,3 @@ class Swarm():
             self._velocity_update_SPSO2011()
         else:
             raise NotImplementedError()
-
-    def update_swarm(self):
-        """
-        TODO: docstring
-        """
-        self.compute_velocity()
-        self.position = self.position + self.velocity
-
-        # update pbest
-        func_eval = self.func(self.position)
-
-
-        for idx in range(self.n_particles):
-            if self.pbest[idx] <= func_eval[idx]:
-                continue
-            if self.pbest[idx] > func_eval[idx]:
-                #print('Change')
-                self.pbest[idx] = func_eval[idx]
-                self.pbest_position[idx, :] = self.position[idx, :]
-                #print(self.pbest_position[idx, :])
-
-
