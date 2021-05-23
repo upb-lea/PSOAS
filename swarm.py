@@ -5,6 +5,8 @@ Implementation of the Swarm class for the Particle Swarm Optimization.
 """
 
 from operations import normal_distribution, uniform_distribution
+from smt.sampling_methods import LHS
+from pyDOE2 import lhs
 import numpy as np
 
 class Swarm():
@@ -12,11 +14,11 @@ class Swarm():
     TODO: Class docsting
     """
 
-    def __init__(self, func, n_particles, dim, constr, options=None):
+    def __init__(self, func, n_particles, dim, constr=None, options=None):
         """
         TODO: docstring
         """
-        assert constr.shape == (2, dim)
+        # assert constr.shape == (2, dim)
 
         if options is None:
             self.options = {"mode": 'SPSO2011', "topology":'global'}
@@ -33,7 +35,13 @@ class Swarm():
         """
         TODO: docstring, Hypercube-sampling
         """
-        self.position = np.random.uniform(0, 1, (self.n_particles, self.dim))
+        print('This is self.constr ->', self.constr)
+        if self.constr != None:
+            sampling = LHS(xlimits=self.constr)
+            self.position = sampling(self.n_particles)
+        else:
+            self.position = lhs(self.dim, self.n_particles)
+
         self.velocity = np.random.uniform(0, 1, (self.n_particles, self.dim))
         self.pbest_position = self.position
         self.pbest = self.func(self.position)
