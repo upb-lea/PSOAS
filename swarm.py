@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from operations import normal_distribution, uniform_distribution
+from operations import random_hypersphere_draw, uniform_distribution
 
 
 class Swarm():
@@ -80,12 +80,8 @@ class Swarm():
 
         r = np.linalg.norm(center - self.position, axis=1)
 
-        u = np.random.normal(0, 1, (self.n_particles, self.dim+2))
-        u_norm = np.linalg.norm(u, axis=1)
-        u /= u_norm[:,None]
-        u *= r[:,None]
+        offset = random_hypersphere_draw(r, self.dim)
 
-        offset = u[:,:self.dim]
         sample_points = center + offset
         
         omega = 1 / (2*np.log(2))
