@@ -1,5 +1,7 @@
 """Implementation of the Swarm class for the Particle Swarm Optimization."""
 
+from operations import normal_distribution, uniform_distribution
+from smt.sampling_methods import LHS
 import numpy as np
 
 from operations import random_hypersphere_draw, uniform_distribution
@@ -14,7 +16,7 @@ class Swarm():
         """
         TODO: docstring
         """
-        assert constr.shape == (2, dim)
+        assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape} !"
 
         if options is None:
             self.options = {"mode": 'SPSO2011', "topology":'global'}
@@ -31,7 +33,9 @@ class Swarm():
         """
         TODO: docstring, Hypercube-sampling
         """
-        self.position = np.random.uniform(2, 20, (self.n_particles, self.dim))
+        sampling = LHS(xlimits=self.constr) # Set up latin hypercube sampling within given constraints
+        self.position = sampling(self.n_particles)
+
         self.velocity = np.random.uniform(0, 1, (self.n_particles, self.dim))
         self.pbest_position = self.position
         self.pbest = self.func(self.position)
