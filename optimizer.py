@@ -34,6 +34,9 @@ class Optimizer():
         self.Swarm.compute_velocity()
         self.Swarm.position = self.Swarm.position + self.Swarm.velocity
 
+
+
+
         # update pbest
         func_eval = self.Swarm.func(self.Swarm.position)
 
@@ -51,3 +54,19 @@ class Optimizer():
             gbest, gbest_position = self.Swarm.compute_gbest()
             gbest_list.append(gbest)
         return gbest_list
+
+    def enforce_constraints(self):
+        positions = self.Swarm.position
+        constr = self.Swarm.constr
+        velocity = self.Swarm.velocity
+
+
+        bool_below = positions < self.Swarm.constr[:, 0]
+        bool_above = positions > self.Swarm.constr[:, 1]
+
+        for dim in range(self.Swarm.dim):
+            positions[bool_below[:, dim], dim] = self.Swarm.constr[dim, 0]
+            positions[bool_above[:, dim], dim] = self.Swarm.constr[dim, 1]
+
+            velocity[bool_below[:, dim], dim] = 0
+            velocity[bool_above[:, dim], dim] = 0
