@@ -4,6 +4,7 @@ optimizer and manager for the swarm, surrogates and databases.
 """
 
 import numpy as np
+from numpy.core.fromnumeric import mean
 
 from swarm import Swarm
 
@@ -51,12 +52,25 @@ class Optimizer():
         """
         TODO: docstring
         """
-        gbest_list = []
+        results = {"gbest_list":[], "iter": None}
         for i in range(self.max_iter):
+            prior_pbest = self.Swarm.pbest.copy()
+
             self.update_swarm()
+
             gbest, gbest_position = self.Swarm.compute_gbest()
-            gbest_list.append(gbest)
-        return gbest_list
+            results['gbest_list'].append(gbest)
+
+            mean_squared_change = np.linalg.norm(prior_pbest - self.Swarm.pbest)
+            if mean_squared_change < self.Swarm.options["eps"]:
+                results['iter'] = i+1
+                break
+        
+        results['x_opt'] = gbest_position
+        results['func_opt'] = gbest
+        if results['iter'] == None:
+            results['iter'] = self.max_iter
+        return results
 
     def enforce_constraints(self):
         """
