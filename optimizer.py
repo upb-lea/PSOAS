@@ -21,6 +21,10 @@ class Optimizer():
         self.max_iter = max_iter
         self.Swarm = Swarm(func, n_particles, dim, constr)
 
+        self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
+        self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
+        self.velocity_reset = np.zeros((n_particles, dim))
+
     def __call__(self):
         """
         TODO: docstring
@@ -34,8 +38,7 @@ class Optimizer():
         self.Swarm.compute_velocity()
         self.Swarm.position = self.Swarm.position + self.Swarm.velocity
 
-
-
+        self.enforce_constraints()
 
         # update pbest
         func_eval = self.Swarm.func(self.Swarm.position)
@@ -56,17 +59,13 @@ class Optimizer():
         return gbest_list
 
     def enforce_constraints(self):
-        positions = self.Swarm.position
-        constr = self.Swarm.constr
-        velocity = self.Swarm.velocity
+        """
+        TODO: docstring
+        """
+        bool_below = self.Swarm.position < self.Swarm.constr[:, 0]
+        bool_above = self.Swarm.position > self.Swarm.constr[:, 1]
 
-
-        bool_below = positions < self.Swarm.constr[:, 0]
-        bool_above = positions > self.Swarm.constr[:, 1]
-
-        for dim in range(self.Swarm.dim):
-            positions[bool_below[:, dim], dim] = self.Swarm.constr[dim, 0]
-            positions[bool_above[:, dim], dim] = self.Swarm.constr[dim, 1]
-
-            velocity[bool_below[:, dim], dim] = 0
-            velocity[bool_above[:, dim], dim] = 0
+        self.Swarm.position[bool_below] = self.constr_below[bool_below]
+        self.Swarm.position[bool_above] = self.constr_above[bool_above]
+        self.Swarm.velocity[bool_below] = self.velocity_reset[bool_below]
+        self.Swarm.velocity[bool_above] = self.velocity_reset[bool_above]
