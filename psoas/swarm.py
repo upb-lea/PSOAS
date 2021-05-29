@@ -1,10 +1,9 @@
 """Implementation of the Swarm class for the Particle Swarm Optimization."""
 
-from operations import normal_distribution, uniform_distribution
 from smt.sampling_methods import LHS
 import numpy as np
 
-from operations import random_hypersphere_draw, uniform_distribution
+from psoas.operations import normal_distribution, random_hypersphere_draw, uniform_distribution
 
 
 class Swarm():

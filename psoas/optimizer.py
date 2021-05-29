@@ -10,7 +10,7 @@ Typical usage example:
 import numpy as np
 from numpy.core.fromnumeric import mean
 
-from swarm import Swarm
+from psoas.swarm import Swarm
 
 
 class Optimizer():
