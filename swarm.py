@@ -16,7 +16,7 @@ class Swarm():
         """
         TODO: docstring
         """
-        assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape} !"
+        assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape}!"
 
         if options is None:
             self.options = {"mode": 'SPSO2011', "topology":'global', "eps":0.005}
@@ -37,6 +37,7 @@ class Swarm():
         self.position = sampling(self.n_particles)
 
         self.velocity = np.random.uniform(size=(self.n_particles, self.dim))
+
         self.pbest_position = self.position
         self.pbest = self.func(self.position)
 
