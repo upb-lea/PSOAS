@@ -28,6 +28,23 @@ class Swarm():
         self.constr = constr
         self._calculate_initial_values()
 
+    def evaluate_function(self, x):
+        """
+        TODO: docstring
+        """
+        assert x.shape == (self.n_particles, self.dim)
+        
+        try:
+            res = self.func(x)
+            assert res.shape == (self.n_particles,)
+        except (ValueError, AssertionError):
+            res = np.zeros(self.n_particles)
+            for idx in range(self.n_particles):
+                res[idx] = self.func(x[idx, :])
+
+        return res
+            
+
     def _calculate_initial_values(self):
         """
         TODO: docstring, Hypercube-sampling
@@ -38,9 +55,9 @@ class Swarm():
         self.velocity = np.random.uniform(size=(self.n_particles, self.dim))
 
         self.pbest_position = self.position
-        self.pbest = self.func(self.position)
+        self.pbest = self.evaluate_function(self.position)
 
-    def _use_topology():
+    def _use_topology(self):
         """
         TODO: docstring
         """

@@ -61,7 +61,7 @@ class Optimizer():
         self.enforce_constraints()
 
         # update pbest
-        func_eval = self.Swarm.func(self.Swarm.position)
+        func_eval = self.Swarm.evaluate_function(self.Swarm.position)
 
         bool_decider = self.Swarm.pbest > func_eval
         self.Swarm.pbest[bool_decider] = func_eval[bool_decider]
