@@ -1,4 +1,4 @@
-"""Implementation of the Swarm class for the Particle Swarm Optimization."""
+"""Implementation of the Swarm class for the Particle Swarm Optimization (PSO)."""
 
 from smt.sampling_methods import LHS
 import numpy as np
@@ -7,13 +7,23 @@ from psoas.operations import normal_distribution, random_hypersphere_draw, unifo
 
 
 class Swarm():
-    """
-    TODO: Class docsting
+    """Swarm class implementation.
+
+    Holds all information regarding the swarm used in the PSO. Most notably the current
+    position and velocity of all particles and the position and function value of the personal 
+    best position of each particle. Moreover it holds functions to compute the estimated 
+    global optimum and a local optimum which depends on the topology.
     """
 
     def __init__(self, func, n_particles, dim, constr, options=None):
-        """
-        TODO: docstring
+        """Creates and initializes a swarm class instance.
+
+        Args:
+            func: The function whose global optimum is to be determined
+            n_particles: The amount of particles which is used in the swarm
+            dim: The dimension of the search-space
+            constr: The constraints of the search-space with shape (dim, 2)
+            options: Options for the swarm in form of a dict
         """
         assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape}!"
 
@@ -30,7 +40,22 @@ class Swarm():
 
     def evaluate_function(self, x):
         """
-        TODO: docstring
+        Evaluates the function specified by the class attribute self.func.
+
+        This function asserts that the input is in shape (self.n_particles, self.dim), i.e. that 
+        the given function is evaluated for each particle at the current position in the 
+        self.dim-dimensional space. Therefore the output is of shape (self.n_particles,). While 
+        it is generally preferable to use functions which take such input shapes and deliver such 
+        a result, it is not enforced here. It is also possible to optimize on a function which 
+        takes one point in the search space as the input and delivers a scalar output. This case 
+        is implemented as a for loop in Python which makes it rather inefficient in comparison
+        to the matrix approach.
+
+        Args:
+            x: Positions of all particles in the search space to be evaluated, shape is (self.n_particles, self.dim)
+        
+        Returns:
+            An array with the function evaluation for each particle with shape (self.n_particles,)
         """
         assert x.shape == (self.n_particles, self.dim)
         
@@ -43,11 +68,12 @@ class Swarm():
                 res[idx] = self.func(x[idx, :])
 
         return res
-            
 
     def _calculate_initial_values(self):
-        """
-        TODO: docstring, Hypercube-sampling
+        """Calculates the initial values for the position using Latin Hypercube Sampling of each
+        particle. The initialization for the personal best postion and function value is given as
+        a result of the initial position since it is the only position visited so far. The velocity
+        for each particle is sampled uniformly between 0 and 1 (TODO: dependency on the constraints).
         """
         sampling = LHS(xlimits=self.constr) # Set up latin hypercube sampling within given constraints
         self.position = sampling(self.n_particles)
@@ -59,7 +85,9 @@ class Swarm():
 
     def _use_topology(self):
         """
-        TODO: docstring
+        Applies a specified topology in the computation for a local best among the particles.
+
+        TODO: Implementation
         """
         raise NotImplementedError()
 
@@ -85,7 +113,9 @@ class Swarm():
 
     def _velocity_update_SPSO2011(self):
         """
-        TODO: docstring, SPSO2011(ZambranoBigiarini2013)
+        This implementation of the velocity update is based on the Standard Particle Swarm 
+        Optimization 2011 (SPSO2011) as presented in the paper ZambranoBigiarini2013 
+        (doi: 10.1109/CEC.2013.6557848).
         """
         lbest, lbest_position = self.compute_lbest()
         # gbest, gbest_position = self.compute_gbest()

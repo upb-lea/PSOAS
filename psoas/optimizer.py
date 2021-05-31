@@ -14,7 +14,7 @@ from psoas.swarm import Swarm
 
 
 class Optimizer():
-    """Optimizer class instance.
+    """Optimizer class implementation.
 
     This class manages and updates the Swarm instance and any instances of surrogates and databases.
     It is designed to be used from the outside of the package to find the global optimum of a given 
