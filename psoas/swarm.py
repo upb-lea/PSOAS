@@ -78,7 +78,7 @@ class Swarm():
         sampling = LHS(xlimits=self.constr) # Set up latin hypercube sampling within given constraints
         self.position = sampling(self.n_particles)
 
-        self.velocity = np.random.uniform(size=(self.n_particles, self.dim))
+        self.velocity = (np.random.uniform(size=(self.n_particles, self.dim)) - self.position)/2
 
         self.pbest_position = self.position
         self.pbest = self.evaluate_function(self.position)
