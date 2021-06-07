@@ -56,9 +56,11 @@ class Optimizer():
         the previous personal best position.
         """
         self.Swarm.compute_velocity()
+        self.enforce_constraints(check_position=False, check_velocity=True)
+
         self.Swarm.position = self.Swarm.position + self.Swarm.velocity
 
-        self.enforce_constraints()
+        self.enforce_constraints(check_position=True, check_velocity=False)
 
         # update pbest
         func_eval = self.Swarm.evaluate_function(self.Swarm.position)
@@ -98,17 +100,25 @@ class Optimizer():
             results['iter'] = self.max_iter
         return results
 
-    def enforce_constraints(self):
+    def enforce_constraints(self, check_position, check_velocity):
         """Enforces the constraints of the valid search space.
 
         Any particle which left the valid search space is moved back into it. Furthermore
         the velocity which brought the particle out of the valid search space is put to 
         zero.
         """
-        bool_below = self.Swarm.position < self.Swarm.constr[:, 0]
-        bool_above = self.Swarm.position > self.Swarm.constr[:, 1]
+        if check_position:
+            bool_below = self.Swarm.position < self.Swarm.constr[:, 0]
+            bool_above = self.Swarm.position > self.Swarm.constr[:, 1]
 
-        self.Swarm.position[bool_below] = self.constr_below[bool_below]
-        self.Swarm.position[bool_above] = self.constr_above[bool_above]
-        self.Swarm.velocity[bool_below] = self.velocity_reset[bool_below]
-        self.Swarm.velocity[bool_above] = self.velocity_reset[bool_above]
+            self.Swarm.position[bool_below] = self.constr_below[bool_below]
+            self.Swarm.position[bool_above] = self.constr_above[bool_above]
+            self.Swarm.velocity[bool_below] = self.velocity_reset[bool_below]
+            self.Swarm.velocity[bool_above] = self.velocity_reset[bool_above]
+
+        if check_velocity:
+            bool_below = self.Swarm.velocity < self.Swarm.constr[:, 0]
+            bool_above = self.Swarm.velocity > self.Swarm.constr[:, 1]
+
+            self.Swarm.velocity[bool_below] = self.constr_below[bool_below]
+            self.Swarm.velocity[bool_above] = self.constr_above[bool_above]

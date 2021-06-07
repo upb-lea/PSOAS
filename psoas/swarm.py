@@ -28,7 +28,8 @@ class Swarm():
         assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape}!"
 
         if options is None:
-            self.options = {"mode": 'SPSO2011', "topology":'global', "eps":0.005}
+            # default options
+            self.options = {"mode": 'SPSO2011', "topology": 'global', "eps": 0.0001}
         else:
             self.options = options
 
@@ -75,10 +76,10 @@ class Swarm():
         a result of the initial position since it is the only position visited so far. The velocity
         for each particle is sampled uniformly between 0 and 1 (TODO: dependency on the constraints).
         """
-        sampling = LHS(xlimits=self.constr) # Set up latin hypercube sampling within given constraints
-        self.position = sampling(self.n_particles)
+        lhs_sampling = LHS(xlimits=self.constr) # Set up latin hypercube sampling within given constraints
+        self.position = lhs_sampling(self.n_particles)
 
-        self.velocity = (np.random.uniform(size=(self.n_particles, self.dim)) - self.position)/2
+        self.velocity = (lhs_sampling(self.n_particles) - self.position)/2
 
         self.pbest_position = self.position
         self.pbest = self.evaluate_function(self.position)
