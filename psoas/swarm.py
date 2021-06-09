@@ -84,14 +84,6 @@ class Swarm():
         self.pbest_position = self.position
         self.pbest = self.evaluate_function(self.position)
 
-    def _use_topology(self):
-        """
-        Applies a specified topology in the computation for a local best among the particles.
-
-        TODO: Implementation
-        """
-        raise NotImplementedError()
-
     def compute_gbest(self):
         """Returns the global optimum found by any of the particles."""
         idx = np.argmin(self.pbest)
@@ -108,7 +100,28 @@ class Swarm():
         if self.options['topology'] == 'global':
             gbest, gbest_position = self.compute_gbest()
             ones = np.ones(self.n_particles)
-            return gbest * ones, ones[:, None] @ gbest_position[None, :]  
+            return gbest * ones, ones[:, None] @ gbest_position[None, :]
+
+        elif self.options['topology'] == 'adaptive_random':
+            n_neighbors = 3
+
+            # calculate update_neighbors
+            update_neighbors = self.no_change_in_gbest
+
+            if (not hasattr(self, 'neighbors')) or update_neighbors:
+                self.neighbors = np.random.rand(self.n_particles, self.n_particles).argpartition(n_neighbors, axis=1)[:,:n_neighbors]
+                self.neighbors = np.concatenate((np.arange(0, self.n_particles)[:, None], self.neighbors), axis=1)
+
+            informed_particles = np.zeros((self.n_particles, self.n_particles))
+            informed_particles[:] = np.nan
+            for i in range(self.n_particles):
+                informed_indices = self.neighbors[i]
+                for idx in informed_indices:
+                    informed_particles[idx, i] = self.pbest[i]
+
+            best_indices = np.argmin(informed_particles, axis=1)
+            return self.pbest[best_indices], self.pbest_position[best_indices]
+
         else:
             raise NotImplementedError()
 
