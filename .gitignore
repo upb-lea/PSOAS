@@ -4,10 +4,16 @@
 # Distribution / packaging
 *.egg-info/
 *.egg
+Pipfile
 
 # Jupyter Notebook
 .ipynb_checkpoints
 __pycache__/
+report.log
 
 #Evaluation
 evalset
+exdata
+cec2013single
+ppdata
+coco
