@@ -9,6 +9,7 @@ Typical usage example:
 
 import numpy as np
 from numpy.core.fromnumeric import mean
+from tabulate import tabulate
 
 from psoas.swarm import Swarm
 
@@ -40,7 +41,7 @@ class Optimizer():
         """
         self.func = func
         self.max_iter = max_iter
-        self.Swarm = Swarm(func, n_particles, dim, constr)
+        self.Swarm = Swarm(func, n_particles, dim, constr, options)
 
         self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
         self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
@@ -80,6 +81,8 @@ class Optimizer():
             a list containing the function value history of the presumed global optimum per iteration,
             the amount of iterations used in the optimization process.
         """
+        small_change_counter = 0
+
         results = {"gbest_list":[], "iter": None}
         for i in range(self.max_iter):
             prior_pbest = self.Swarm.pbest.copy()
@@ -90,7 +93,15 @@ class Optimizer():
             results['gbest_list'].append(gbest)
 
             mean_squared_change = np.linalg.norm(prior_pbest - self.Swarm.pbest)
-            if mean_squared_change < self.Swarm.options["eps"]:
+            if mean_squared_change < self.Swarm.options['eps']:
+                small_change_counter += 1
+            else:
+                small_change_counter = 0
+            
+            if self.Swarm.options['verbose']:
+                self.print_iteration_information(i)
+
+            if small_change_counter >= 5:
                 results['iter'] = i+1
                 break
         
@@ -122,3 +133,6 @@ class Optimizer():
 
             self.Swarm.velocity[bool_below] = self.constr_below[bool_below]
             self.Swarm.velocity[bool_above] = self.constr_above[bool_above]
+
+    def print_iteration_information(self, idx):
+        print('WIP')

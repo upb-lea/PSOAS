@@ -29,7 +29,7 @@ class Swarm():
 
         if options is None:
             # default options
-            self.options = {"mode": 'SPSO2011', "topology": 'global', "eps": 0.0001}
+            self.options = {"mode": 'SPSO2011', "topology": 'global', "eps": 0.0001, 'verbose': False}
         else:
             self.options = options
 
