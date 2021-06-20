@@ -12,6 +12,7 @@ from numpy.core.fromnumeric import mean
 from tabulate import tabulate
 
 from psoas.swarm import Swarm
+from psoas.surrogate import Surrogate
 
 
 class Optimizer():
@@ -42,10 +43,14 @@ class Optimizer():
         self.func = func
         self.max_iter = max_iter
         self.Swarm = Swarm(func, n_particles, dim, constr, options)
+        
+        self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.evaluate_function(self.Swarm.position))
 
         self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
         self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
         self.velocity_reset = np.zeros((n_particles, dim))
+
+        
 
     def update_swarm(self):
         """Updates the Swarm instance.
@@ -65,6 +70,9 @@ class Optimizer():
 
         # update pbest
         func_eval = self.Swarm.evaluate_function(self.Swarm.position)
+
+        self.SurrogateModel.update_data(self.Swarm.position, func_eval)
+        self.SurrogateModel.fit_model()
 
         bool_decider = self.Swarm.pbest > func_eval
         self.Swarm.pbest[bool_decider] = func_eval[bool_decider]
@@ -91,6 +99,8 @@ class Optimizer():
 
             gbest, gbest_position = self.Swarm.compute_gbest()
             results['gbest_list'].append(gbest)
+
+            self.SurrogateModel.plotter_2d()
 
             mean_squared_change = np.linalg.norm(prior_pbest - self.Swarm.pbest)
             if mean_squared_change < self.Swarm.options['eps']:
@@ -136,3 +146,5 @@ class Optimizer():
 
     def print_iteration_information(self, idx):
         print('WIP')
+
+    
