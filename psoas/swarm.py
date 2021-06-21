@@ -95,17 +95,38 @@ class Swarm():
     def compute_lbest(self):
         """
         Returns the local optimum for each particle depending on the topology
-        specified in the options.
+        specified in the options. 
         """
         if self.options['topology'] == 'global':
             gbest, gbest_position = self.compute_gbest()
             ones = np.ones(self.n_particles)
             return gbest * ones, ones[:, None] @ gbest_position[None, :]
 
+        elif self.options['topology'] == 'ring':
+            neighbors = np.zeros([self.n_particles, 3])
+            neighbors[0, 0] = self.pbest[-1]
+            neighbors[1:, 0] = self.pbest[0:-1]
+            neighbors[:, 1]  = self.pbest
+            neighbors[-1, 2] = self.pbest[0]
+            neighbors[:-1, 2] = self.pbest[1:]
+
+            best_indices = np.argmin(neighbors, axis=1)
+            
+            lbest = np.choose(best_indices, neighbors.T)
+            
+            pos_indices = np.linspace(0, self.n_particles-1, self.n_particles, dtype=np.int32) + best_indices - 1
+    
+            #ensure index wrapping
+            if pos_indices[-1] == self.n_particles:
+                pos_indices[-1] = 0
+            lbest_position = self.pbest_position[pos_indices]
+
+            return lbest, lbest_position
+
         elif self.options['topology'] == 'adaptive_random':
             n_neighbors = 3
 
-            # calculate update_neighbors
+            # the assignments are changed if there is no change in the global best
             update_neighbors = self.no_change_in_gbest
 
             if (not hasattr(self, 'neighbors')) or update_neighbors:
@@ -123,7 +144,7 @@ class Swarm():
             return self.pbest[best_indices], self.pbest_position[best_indices]
 
         else:
-            raise NotImplementedError()
+            raise ValueError(f"Expected global, ring or adaptive random for the topology. Got {self.options['topology']}")
 
     def _velocity_update_SPSO2011(self):
         """
