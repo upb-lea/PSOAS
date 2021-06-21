@@ -9,9 +9,6 @@ Typical usage example:
 
 import numpy as np
 from numpy.core.fromnumeric import mean
-from prettytable.prettytable import PLAIN_COLUMNS
-from tabulate import tabulate
-from prettytable import PrettyTable
 import tableprint as tp
 
 from psoas.swarm import Swarm
@@ -104,12 +101,12 @@ class Optimizer():
             if self.Swarm.options['verbose']:
                 self.print_iteration_information(i, gbest)
 
-            if small_change_counter >= 5:
+            if small_change_counter >= 10:
                 results['iter'] = i+1
                 break
 
         if self.Swarm.options['verbose']:
-            print(tp.bottom(2, width=20))
+            print(tp.bottom(4, width=20))
             print('\n')
 
         results['x_opt'] = gbest_position
@@ -146,10 +143,13 @@ class Optimizer():
             print('\n', 'Options:')
             print(self.Swarm.options, '\n')
 
-            headers = ['idx', 'gbest']
+            headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
             print(tp.header(headers, width=20))
 
         elif idx % 10 == 0:
-            data = [idx, gbest]
+            mean_pbest = np.mean(self.Swarm.pbest)
+            var_pbest = np.var(self.Swarm.pbest)
+
+            data = [idx, gbest, mean_pbest, var_pbest]
 
             print(tp.row(data, width=20))
