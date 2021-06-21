@@ -21,7 +21,7 @@ class Surrogate():
         """
         if type(options['surrogate']) == str:
             if options['surrogate'] == 'RBF':
-                self.sm = RBF(theta0=[1e-2])
+                self.sm = RBF(d0=6)
             elif options['surrogate'] == 'KRG':
                 self.sm = KRG(theta0=[1e-2])
             else:
@@ -30,22 +30,20 @@ class Surrogate():
             raise ValueError(f"Expected string as parameter. Got a {type(options['surrogate'])} type.")
         
         self.sm.options['print_global'] = False
-        self.positions = init_position
-        self.f_val = init_f_val
+        self.positions = init_position.copy()
+        self.f_val = init_f_val.copy()
 
         self.dim = init_position.shape[1]
         self.n_particels = init_position.shape[0]
 
-    def update_data(self, curr_postion, curr_f_val):
+    def update_data(self, curr_position, curr_f_val):
         """
         Docstring: TODO
         """
-        self.positions = np.concatenate((self.positions, curr_postion), axis=0)
+        self.positions = np.concatenate((self.positions, curr_position), axis=0)
         self.f_val = np.concatenate((self.f_val, curr_f_val))
 
-        print(type(self.f_val[3]))
-        
-        self.positions, idx = np.unique(self.positions,return_index=True, axis=0)
+        self.positions, idx = np.unique(self.positions, return_index=True, axis=0)
         self.f_val = self.f_val[idx]
 
     def fit_model(self):
@@ -55,24 +53,19 @@ class Surrogate():
         self.sm.set_training_values(self.positions, self.f_val)
         self.sm.train()
 
-
     def predict(self, point):
         """
         Docstring: TODO
         """
         assert point.shape[1] == (self.dim), f'The dimension of the point does not match with the dimension of the model. Expect dimension {self.dim}, got {point.shape[0]}'
-
         predict_val = self.sm.predict_values(point)
-
         return predict_val
-
 
     def plotter_2d(self):
         """
         Docstring: TODO
         """
         assert self.dim == 2, f'Expect dimension to be 2! Got {self.dim}.'
-
         num = 100
         axis = np.linspace(-100, 100, num)
         x, y = np.meshgrid(axis, axis)
@@ -87,16 +80,8 @@ class Surrogate():
 
         print(80 * "*")
 
-        print(self.positions[:,0].shape)
-        print(self.f_val.shape)
-
-        
-
-
-        fig = go.Figure(data=[go.Surface(z=predict_val_reshaped)])
-        fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_val))
-
-
+        fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_val_reshaped)])
+        fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_val, mode='markers'))
 
         # fig.update_layout(autosize=False,
         #           width=500, height=500,

@@ -45,13 +45,11 @@ class Optimizer():
         self.Swarm = Swarm(func, n_particles, dim, constr, options)
 
         if 'surrogate' in options.keys():
-            self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.evaluate_function(self.Swarm.position), options)
+            self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, options)
 
         self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
         self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
         self.velocity_reset = np.zeros((n_particles, dim))
-
-        
 
     def update_swarm(self):
         """Updates the Swarm instance.
@@ -76,15 +74,12 @@ class Optimizer():
         self.Swarm.pbest[bool_decider] = self.Swarm.f_values[bool_decider]
         self.Swarm.pbest_position[bool_decider, :] = self.Swarm.position[bool_decider, :]
 
-
     def update_surrogate(self):
         """
         Docstring: TODO
         """
-
         self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values)
         self.SurrogateModel.fit_model()
-
 
     def optimize(self):
         """Main optimization routine.
@@ -105,11 +100,8 @@ class Optimizer():
 
             self.update_swarm()
 
-
-            if hasattr(self, 'SurrogateModel'):
+            if hasattr(self, 'SurrogateModel') and i%100 == 0:
                 self.update_surrogate()
-                
-            if i%10==0:
                 self.SurrogateModel.plotter_2d()
 
             gbest, gbest_position = self.Swarm.compute_gbest()
