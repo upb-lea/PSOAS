@@ -43,8 +43,9 @@ class Optimizer():
         self.func = func
         self.max_iter = max_iter
         self.Swarm = Swarm(func, n_particles, dim, constr, options)
-        
-        self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.evaluate_function(self.Swarm.position))
+
+        if 'surrogate' in options.keys():
+            self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.evaluate_function(self.Swarm.position), options)
 
         self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
         self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
@@ -69,14 +70,21 @@ class Optimizer():
         self.enforce_constraints(check_position=True, check_velocity=False)
 
         # update pbest
-        func_eval = self.Swarm.evaluate_function(self.Swarm.position)
+        self.Swarm.f_values = self.Swarm.evaluate_function(self.Swarm.position)
 
-        self.SurrogateModel.update_data(self.Swarm.position, func_eval)
+        bool_decider = self.Swarm.pbest > self.Swarm.f_values
+        self.Swarm.pbest[bool_decider] = self.Swarm.f_values[bool_decider]
+        self.Swarm.pbest_position[bool_decider, :] = self.Swarm.position[bool_decider, :]
+
+
+    def update_surrogate(self):
+        """
+        Docstring: TODO
+        """
+
+        self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values)
         self.SurrogateModel.fit_model()
 
-        bool_decider = self.Swarm.pbest > func_eval
-        self.Swarm.pbest[bool_decider] = func_eval[bool_decider]
-        self.Swarm.pbest_position[bool_decider, :] = self.Swarm.position[bool_decider, :]
 
     def optimize(self):
         """Main optimization routine.
@@ -97,10 +105,15 @@ class Optimizer():
 
             self.update_swarm()
 
+
+            if hasattr(self, 'SurrogateModel'):
+                self.update_surrogate()
+                
+            if i%10==0:
+                self.SurrogateModel.plotter_2d()
+
             gbest, gbest_position = self.Swarm.compute_gbest()
             results['gbest_list'].append(gbest)
-
-            self.SurrogateModel.plotter_2d()
 
             mean_squared_change = np.linalg.norm(prior_pbest - self.Swarm.pbest)
             if mean_squared_change < self.Swarm.options['eps']:
