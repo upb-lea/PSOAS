@@ -40,17 +40,23 @@ class Optimizer():
                 optimization call
             options: Options for the optimizer and swarm
         """
-        if options is None:
-            # default options
-            self.options = {'eps': 0.0, 
-                            'verbose': True,
-                            'swarm_options': {'mode': 'SPSO2011', 
-                                              'topology': 'global'}, 
-                            'surrogate_options': {'surrogate_type': 'KRG',
-                                                  "3d_plot": False}
-                           }
-        else:
-            self.options = options
+        # default options
+        self.options = {'eps': 0.001,
+                        'stalling_steps': 2,
+                        'verbose': True,
+                        'verbose_interval': 1,
+                        'swarm_options': {'mode': 'SPSO2011', 
+                                          'topology': 'global'}, 
+                        'surrogate_options': {'surrogate_type': 'KRG',
+                                              '3d_plot': False,
+                                              'plotting_interval': 10}
+                        }
+        if options is not None:
+            for key in options.keys():
+                if key in ['swarm_options', 'surrogate_options']:
+                    self.options[key].update(options[key])
+                else:
+                    self.options[key] = options[key]
 
         self.func = func
         self.max_iter = max_iter
