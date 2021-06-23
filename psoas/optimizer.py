@@ -6,9 +6,8 @@ Typical usage example:
     opt = Optimizer(func, n_particles, dimension, constraints)
     result = opt.optimize()
 """
-
 import numpy as np
-from numpy.core.fromnumeric import mean
+import pprint
 import tableprint as tp
 
 from psoas.swarm import Swarm
@@ -42,9 +41,9 @@ class Optimizer():
         """
         # default options
         self.options = {'eps': 0.001,
-                        'stalling_steps': 2,
-                        'verbose': True,
-                        'verbose_interval': 1,
+                        'stalling_steps': 10,
+                        'verbose': False,
+                        'verbose_interval': 50,
                         'swarm_options': {'mode': 'SPSO2011', 
                                           'topology': 'global'}, 
                         'surrogate_options': {'surrogate_type': 'KRG',
@@ -62,7 +61,7 @@ class Optimizer():
         self.max_iter = max_iter
         self.Swarm = Swarm(func, n_particles, dim, constr, self.options['swarm_options'])
 
-        if 'surrogate_type' in options['surrogate_options'].keys():
+        if 'surrogate_type' in self.options['surrogate_options'].keys():
             self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, 
                                             self.options["surrogate_options"])
 
@@ -175,7 +174,8 @@ class Optimizer():
     def print_iteration_information(self, idx, gbest):
         if idx == 0:
             print('\n', 'Options:')
-            print(self.options, '\n')
+            pprint.pprint(self.options)
+            print()
 
             self.headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
             print(tp.header(self.headers, width=20))
