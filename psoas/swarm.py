@@ -15,7 +15,7 @@ class Swarm():
     global optimum and a local optimum which depends on the topology.
     """
 
-    def __init__(self, func, n_particles, dim, constr, options=None):
+    def __init__(self, func, n_particles, dim, constr, swarm_options):
         """Creates and initializes a swarm class instance.
 
         Args:
@@ -27,11 +27,7 @@ class Swarm():
         """
         assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape}!"
 
-        if options is None:
-            # default options
-            self.options = {"mode": 'SPSO2011', "topology": 'global', "eps": 0.0001, 'verbose': False}
-        else:
-            self.options = options
+        self.swarm_options = swarm_options
 
         self.func = func
         self.n_particles = n_particles
@@ -104,9 +100,9 @@ class Swarm():
     def compute_lbest(self):
         """
         Returns the local optimum for each particle depending on the topology
-        specified in the options.
+        specified in the swarm's options.
         """
-        if self.options['topology'] == 'global':
+        if self.swarm_options['topology'] == 'global':
             gbest, gbest_position = self.compute_gbest()
             ones = np.ones(self.n_particles)
             return gbest * ones, ones[:, None] @ gbest_position[None, :]  
@@ -145,7 +141,7 @@ class Swarm():
         """
         TODO: docstring
         """
-        if self.options['mode'] == 'SPSO2011':
+        if self.swarm_options['mode'] == 'SPSO2011':
             self._velocity_update_SPSO2011()
         else:
             raise NotImplementedError()

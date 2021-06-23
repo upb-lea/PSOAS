@@ -40,12 +40,25 @@ class Optimizer():
                 optimization call
             options: Options for the optimizer and swarm
         """
+        if options is None:
+            # default options
+            self.options = {'eps': 0.0, 
+                            'verbose': True,
+                            'swarm_options': {'mode': 'SPSO2011', 
+                                              'topology': 'global'}, 
+                            'surrogate_options': {'surrogate_type': 'KRG',
+                                                  "3d_plot": False}
+                           }
+        else:
+            self.options = options
+
         self.func = func
         self.max_iter = max_iter
-        self.Swarm = Swarm(func, n_particles, dim, constr, options)
+        self.Swarm = Swarm(func, n_particles, dim, constr, self.options['swarm_options'])
 
-        if 'surrogate' in options.keys():
-            self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, options)
+        if 'surrogate_type' in options['surrogate_options'].keys():
+            self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, 
+                                            self.options["surrogate_options"])
 
         self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
         self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
@@ -100,7 +113,7 @@ class Optimizer():
 
             self.update_swarm()
 
-            if hasattr(self, 'SurrogateModel') and i%100 == 0:
+            if hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['3d_plot'] and i%10 == 0:
                 self.update_surrogate()
                 self.SurrogateModel.plotter_2d()
 
@@ -108,20 +121,20 @@ class Optimizer():
             results['gbest_list'].append(gbest)
 
             mean_squared_change = np.linalg.norm(prior_pbest - self.Swarm.pbest)
-            if mean_squared_change < self.Swarm.options['eps']:
+            if mean_squared_change < self.options['eps']:
                 small_change_counter += 1
             else:
                 small_change_counter = 0
             
-            if self.Swarm.options['verbose']:
+            if self.options['verbose']:
                 self.print_iteration_information(i, gbest)
 
-            if small_change_counter >= 10:
+            if small_change_counter >= self.options['stalling_steps']:
                 results['iter'] = i+1
                 break
 
-        if self.Swarm.options['verbose']:
-            print(tp.bottom(4, width=20))
+        if self.options['verbose']:
+            print(tp.bottom(len(self.headers), width=20))
             print('\n')
 
         results['x_opt'] = gbest_position
@@ -156,15 +169,16 @@ class Optimizer():
     def print_iteration_information(self, idx, gbest):
         if idx == 0:
             print('\n', 'Options:')
-            print(self.Swarm.options, '\n')
+            print(self.options, '\n')
 
-            headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
-            print(tp.header(headers, width=20))
+            self.headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
+            print(tp.header(self.headers, width=20))
 
-        elif idx % 10 == 0:
+        elif idx % self.options['verbose_interval'] == 0:
             mean_pbest = np.mean(self.Swarm.pbest)
             var_pbest = np.var(self.Swarm.pbest)
 
             data = [idx, gbest, mean_pbest, var_pbest]
+            assert len(data) == len(self.headers)
 
             print(tp.row(data, width=20))

@@ -15,19 +15,19 @@ class Surrogate():
     Docstring: TODO
     """
 
-    def __init__(self, init_position, init_f_val, options=None):
+    def __init__(self, init_position, init_f_val, surrogate_options=None):
         """
         Docstring: TODO
         """
-        if type(options['surrogate']) == str:
-            if options['surrogate'] == 'RBF':
+        if type(surrogate_options['surrogate_type']) == str:
+            if surrogate_options['surrogate_type'] == 'RBF':
                 self.sm = RBF(d0=6)
-            elif options['surrogate'] == 'KRG':
+            elif surrogate_options['surrogate_type'] == 'KRG':
                 self.sm = KRG(theta0=[1e-2])
             else:
-                raise ValueError(f"Expected RBF or KRG as parameter for initialization of the model. Got {options['surrogate']}.")
+                raise ValueError(f"Expected RBF or KRG as parameter for initialization of the model. Got {surrogate_options['surrogate_type']}.")
         else:
-            raise ValueError(f"Expected string as parameter. Got a {type(options['surrogate'])} type.")
+            raise ValueError(f"Expected string as parameter. Got a {type(surrogate_options['surrogate_type'])} type.")
         
         self.sm.options['print_global'] = False
         self.positions = init_position.copy()
