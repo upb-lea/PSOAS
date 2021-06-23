@@ -9,7 +9,7 @@ Typical usage example:
 
 import numpy as np
 from numpy.core.fromnumeric import mean
-from tabulate import tabulate
+import tableprint as tp
 
 from psoas.swarm import Swarm
 from psoas.surrogate import Surrogate
@@ -114,12 +114,16 @@ class Optimizer():
                 small_change_counter = 0
             
             if self.Swarm.options['verbose']:
-                self.print_iteration_information(i)
+                self.print_iteration_information(i, gbest)
 
-            if small_change_counter >= 5:
+            if small_change_counter >= 10:
                 results['iter'] = i+1
                 break
-        
+
+        if self.Swarm.options['verbose']:
+            print(tp.bottom(4, width=20))
+            print('\n')
+
         results['x_opt'] = gbest_position
         results['func_opt'] = gbest
         if results['iter'] == None:
@@ -149,7 +153,18 @@ class Optimizer():
             self.Swarm.velocity[bool_below] = self.constr_below[bool_below]
             self.Swarm.velocity[bool_above] = self.constr_above[bool_above]
 
-    def print_iteration_information(self, idx):
-        print('WIP')
+    def print_iteration_information(self, idx, gbest):
+        if idx == 0:
+            print('\n', 'Options:')
+            print(self.Swarm.options, '\n')
 
-    
+            headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
+            print(tp.header(headers, width=20))
+
+        elif idx % 10 == 0:
+            mean_pbest = np.mean(self.Swarm.pbest)
+            var_pbest = np.var(self.Swarm.pbest)
+
+            data = [idx, gbest, mean_pbest, var_pbest]
+
+            print(tp.row(data, width=20))
