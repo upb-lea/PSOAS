@@ -118,9 +118,9 @@ class Optimizer():
 
             self.update_swarm()
 
-            if hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['3d_plot'] and i%10 == 0:
+            if hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['3d_plot'] and i % self.options['surrogate_options']['plotting_interval'] == 0:
                 self.update_surrogate()
-                self.SurrogateModel.plotter_2d()
+                self.SurrogateModel.plotter_3d()
 
             gbest, gbest_position = self.Swarm.compute_gbest()
             results['gbest_list'].append(gbest)

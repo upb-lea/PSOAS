@@ -61,7 +61,7 @@ class Surrogate():
         predict_val = self.sm.predict_values(point)
         return predict_val
 
-    def plotter_2d(self):
+    def plotter_3d(self):
         """
         Docstring: TODO
         """
