@@ -65,6 +65,8 @@ class EvaluationHyperparameters(Evaluation):
 class EvaluationFunctionSet(Evaluation):
     """
     TODO: docstring
+
+    Multiple functions, (multiple? runs)
     """
 
     def __init__(self, function_list, constr_list):
