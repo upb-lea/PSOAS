@@ -29,7 +29,10 @@ class Evaluation():
         return opt.optimize()
 
     def print_tables(self):
-        print(self.df)
+        try:
+            display(self.df)
+        except:
+            print(self.df)
 
 
 class EvaluationSingle(Evaluation):
@@ -39,16 +42,34 @@ class EvaluationSingle(Evaluation):
     One function, multiple runs, statistical information 
     """
 
-    def __init__(self, func, constr):
+    def __init__(self, func, constr, ground_truth=None, opt_value=None):
         self.func = func
         self.constr = constr
+        if ground_truth is not None:
+            self.ground_truth = ground_truth
+        if opt_value is not None:
+            self.opt_value = opt_value
 
     def evaluate_function(self, n_particles, dim, max_iter, options, n_runs):
-        self._create_dataframe(['n_iter', 'func_opt'], n_runs)
+        keys = ['n_iter', 'term_flag', 'func_opt', 'mean_pbest', 'var_pbest']
+        if hasattr(self, 'ground_truth'):
+            keys.append('dist_gt')
+        if hasattr(self, 'opt_value'):
+            keys.insert(3, 'diff_opt_value')
+
+        self._create_dataframe(keys, n_runs)
         for i in tqdm(range(n_runs)):
             res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, options)
             self.df.loc[i, 'n_iter'] = res['iter']
+            self.df.loc[i, 'term_flag'] = res['term_flag']
             self.df.loc[i, 'func_opt'] = res['func_opt']
+            self.df.loc[i, 'mean_pbest'] = res['mean_pbest']
+            self.df.loc[i, 'var_pbest'] = res['var_pbest']
+            if 'dist_gt' in self.df.keys():
+                assert self.ground_truth.shape == res['x_opt'].shape
+                self.df.loc[i, 'dist_gt'] = np.linalg.norm(self.ground_truth - res['x_opt'])
+            if 'diff_opt_value' in self.df.keys():
+                self.df.loc[i, 'diff_opt_value'] = self.opt_value - res['func_opt']
  
 
 class EvaluationHyperparameters(Evaluation):    

@@ -136,16 +136,21 @@ class Optimizer():
 
             if small_change_counter >= self.options['stalling_steps']:
                 results['iter'] = i+1
+                results['term_flag'] = 2
                 break
 
         if self.options['verbose']:
             print(tp.bottom(len(self.headers), width=20))
             print('\n')
 
+
+        results['mean_pbest'] = np.mean(self.Swarm.pbest)
+        results['var_pbest'] = np.var(self.Swarm.pbest)
         results['x_opt'] = gbest_position
         results['func_opt'] = gbest
         if results['iter'] == None:
             results['iter'] = self.max_iter
+            results['term_flag'] = 1
         return results
 
     def enforce_constraints(self, check_position, check_velocity):
