@@ -105,6 +105,9 @@ class EvaluationHyperparameters(Evaluation):
     def __init__(self):
         pass
 
+    def evaluate_function():
+        raise NotImplementedError
+
 
 class EvaluationFunctionSet(Evaluation):
     """
