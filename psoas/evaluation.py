@@ -69,7 +69,7 @@ class EvaluationSingle(Evaluation):
                 assert self.ground_truth.shape == res['x_opt'].shape
                 self.df.loc[i, 'dist_gt'] = np.linalg.norm(res['x_opt']- self.ground_truth)
             if 'diff_opt_value' in self.df.keys():
-                self.df.loc[i, 'diff_opt_value'] = self.opt_value - res['func_opt']
+                self.df.loc[i, 'diff_opt_value'] = res['func_opt'] - self.opt_value
         
     def get_statistical_information(self):
         mean_iters = np.mean(self.df['n_iter'])
