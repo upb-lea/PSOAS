@@ -34,7 +34,7 @@ class Surrogate():
         self.f_val = init_f_val.copy()
 
         self.dim = init_position.shape[1]
-        self.n_particels = init_position.shape[0]
+        self.n_particles = init_position.shape[0]
 
     def update_data(self, curr_position, curr_f_val):
         """
