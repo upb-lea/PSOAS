@@ -40,7 +40,8 @@ class Optimizer():
             options: Options for the optimizer and swarm
         """
         # default options
-        self.options = {'eps': 0.001,
+        self.options = {'eps_abs': 0.001,
+                        'eps_rel': 0.001,
                         'stalling_steps': 10,
                         'verbose': False,
                         'verbose_interval': 50,
@@ -118,15 +119,20 @@ class Optimizer():
 
             self.update_swarm()
 
-            if hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['3d_plot'] and i%10 == 0:
+            if (hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['3d_plot'] 
+                and i % self.options['surrogate_options']['plotting_interval'] == 0):
+                
                 self.update_surrogate()
-                self.SurrogateModel.plotter_2d()
+                self.SurrogateModel.plotter_3d()
 
             gbest, gbest_position = self.Swarm.compute_gbest()
             results['gbest_list'].append(gbest)
 
             mean_squared_change = np.linalg.norm(prior_pbest - self.Swarm.pbest)
-            if mean_squared_change < self.options['eps']:
+            norm_mean_squared_change = np.linalg.norm((prior_pbest - self.Swarm.pbest) / prior_pbest)
+            if mean_squared_change < self.options['eps_abs']:
+                small_change_counter += 1
+            elif norm_mean_squared_change < self.options['eps_rel']:
                 small_change_counter += 1
             else:
                 small_change_counter = 0
