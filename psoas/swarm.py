@@ -94,13 +94,13 @@ class Swarm():
         Returns the local optimum for each particle depending on the topology
         specified in the options. 
         """
-        if self.options['topology'] == 'global':
+        if self.swarm_options['topology'] == 'global':
             return self.topology_global()
 
-        elif self.options['topology'] == 'ring':
+        elif self.swarm_options['topology'] == 'ring':
             return self.topology_ring()
 
-        elif self.options['topology'] == 'adaptive_random':
+        elif self.swarm_options['topology'] == 'adaptive_random':
             return self.topology_adaptive_random()
 
         else:
