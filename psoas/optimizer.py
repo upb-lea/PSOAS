@@ -66,6 +66,7 @@ class Optimizer():
             self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, 
                                             self.options["surrogate_options"])
 
+        self.Swarm.no_change_in_gbest = False
         self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
         self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
         self.velocity_reset = np.zeros((n_particles, dim))
@@ -116,6 +117,7 @@ class Optimizer():
         results = {"gbest_list":[], "iter": None}
         for i in range(self.max_iter):
             prior_pbest = self.Swarm.pbest.copy()
+            prior_gbest, _  = self.Swarm.compute_gbest()
 
             self.update_swarm()
 
@@ -127,6 +129,8 @@ class Optimizer():
 
             gbest, gbest_position = self.Swarm.compute_gbest()
             results['gbest_list'].append(gbest)
+
+            self.Swarm.no_change_in_gbest = (prior_gbest - gbest == 0)
 
             mean_squared_change = np.linalg.norm(prior_pbest - self.Swarm.pbest)
             norm_mean_squared_change = np.linalg.norm((prior_pbest - self.Swarm.pbest) / prior_pbest)

@@ -81,14 +81,6 @@ class Swarm():
         self.pbest_position = self.position
         self.pbest = self.evaluate_function(self.position)
 
-    def _use_topology(self):
-        """
-        Applies a specified topology in the computation for a local best among the particles.
-
-        TODO: Implementation
-        """
-        raise NotImplementedError()
-
     def compute_gbest(self):
         """Returns the global optimum found by any of the particles."""
         idx = np.argmin(self.pbest)
@@ -100,14 +92,19 @@ class Swarm():
     def compute_lbest(self):
         """
         Returns the local optimum for each particle depending on the topology
-        specified in the swarm's options.
+        specified in the options. 
         """
-        if self.swarm_options['topology'] == 'global':
-            gbest, gbest_position = self.compute_gbest()
-            ones = np.ones(self.n_particles)
-            return gbest * ones, ones[:, None] @ gbest_position[None, :]  
+        if self.options['topology'] == 'global':
+            return self.topology_global()
+
+        elif self.options['topology'] == 'ring':
+            return self.topology_ring()
+
+        elif self.options['topology'] == 'adaptive_random':
+            return self.topology_adaptive_random()
+
         else:
-            raise NotImplementedError()
+            raise ValueError(f"Expected global, ring or adaptive random for the topology. Got {self.options['topology']}")
 
     def _velocity_update_SPSO2011(self):
         """
@@ -145,3 +142,57 @@ class Swarm():
             self._velocity_update_SPSO2011()
         else:
             raise NotImplementedError()
+
+    def topology_global(self):
+        """
+        TODO: docstring
+        """
+        gbest, gbest_position = self.compute_gbest()
+        ones = np.ones(self.n_particles)
+        return gbest * ones, ones[:, None] @ gbest_position[None, :]
+
+    def topology_ring(self):
+        """
+        TODO: docstring
+        """
+        neighbors = np.zeros([self.n_particles, 3])
+        neighbors[0, 0] = self.pbest[-1]
+        neighbors[1:, 0] = self.pbest[0:-1]
+        neighbors[:, 1]  = self.pbest
+        neighbors[-1, 2] = self.pbest[0]
+        neighbors[:-1, 2] = self.pbest[1:]
+
+        best_indices = np.argmin(neighbors, axis=1)
+        lbest = np.choose(best_indices, neighbors.T)
+
+        pos_indices = np.linspace(0, self.n_particles-1, self.n_particles, dtype=np.int32) + best_indices - 1
+
+        #ensure index wrapping
+        if pos_indices[-1] == self.n_particles:
+            pos_indices[-1] = 0
+        lbest_position = self.pbest_position[pos_indices]
+
+        return lbest, lbest_position
+
+    def topology_adaptive_random(self):
+        """
+        TODO: docstring
+        """
+        n_neighbors = 3
+
+        # the assignments are changed if there is no change in the global best
+        update_neighbors = self.no_change_in_gbest
+
+        if (not hasattr(self, 'neighbors')) or update_neighbors:
+            self.neighbors = np.random.rand(self.n_particles, self.n_particles).argpartition(n_neighbors, axis=1)[:,:n_neighbors]
+            self.neighbors = np.concatenate((np.arange(0, self.n_particles)[:, None], self.neighbors), axis=1)
+
+        informed_particles = np.zeros((self.n_particles, self.n_particles))
+        informed_particles[:] = np.nan
+        for i in range(self.n_particles):
+            informed_indices = self.neighbors[i]
+            for idx in informed_indices:
+                informed_particles[idx, i] = self.pbest[i]
+
+        best_indices = np.argmin(informed_particles, axis=1)
+        return self.pbest[best_indices], self.pbest_position[best_indices]
