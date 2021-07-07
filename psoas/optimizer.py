@@ -47,7 +47,8 @@ class Optimizer():
                         'verbose_interval': 50,
                         'swarm_options': {'mode': 'SPSO2011', 
                                           'topology': 'global'}, 
-                        'surrogate_options': {'surrogate_type': 'KRG',
+                        'surrogate_options': {'surrogate_type': 'GP',
+                                              'use_surrogate': True,
                                               '3d_plot': False,
                                               'plotting_interval': 10}
                         }
@@ -121,11 +122,24 @@ class Optimizer():
 
             self.update_swarm()
 
-            if (hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['3d_plot'] 
+            if (hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['use_surrogate']
                 and i % self.options['surrogate_options']['plotting_interval'] == 0):
-                
                 self.update_surrogate()
-                self.SurrogateModel.plotter_3d()
+                prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+                prediction_point = prediction[0][0]
+                f_val_at_pred = self.func(prediction_point)
+
+                idx = np.argmax(self.Swarm.pbest)
+
+                self.Swarm.position[idx] = prediction_point
+                self.Swarm.f_values[idx] = f_val_at_pred
+
+                if f_val_at_pred < self.Swarm.pbest[idx]:
+                    self.Swarm.pbest[idx] = f_val_at_pred
+                    self.Swarm.pbest_position[idx] = prediction_point
+
+                if self.options['surrogate_options']['3d_plot']:
+                    self.SurrogateModel.plotter_3d()
 
             gbest, gbest_position = self.Swarm.compute_gbest()
             results['gbest_list'].append(gbest)

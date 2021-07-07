@@ -8,8 +8,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 
-from smt.surrogate_models import RBF
-from smt.surrogate_models import KRG
+import GPyOpt
+from GPyOpt.models.gpmodel import GPModel
 
 class Surrogate():
     """
@@ -21,16 +21,13 @@ class Surrogate():
         Docstring: TODO
         """
         if type(surrogate_options['surrogate_type']) == str:
-            if surrogate_options['surrogate_type'] == 'RBF':
-                self.sm = RBF(d0=6)
-            elif surrogate_options['surrogate_type'] == 'KRG':
-                self.sm = KRG(theta0=[1e-2])
+            if surrogate_options['surrogate_type'] == 'GP':
+                self.sm = GPModel(exact_feval = True, verbose=False)
             else:
-                raise ValueError(f"Expected RBF or KRG as parameter for initialization of the model. Got {surrogate_options['surrogate_type']}.")
+                raise ValueError(f"Expected GP as parameter for initialization of the model. Got {surrogate_options['surrogate_type']}.")
         else:
             raise ValueError(f"Expected string as parameter. Got a {type(surrogate_options['surrogate_type'])} type.")
-        
-        self.sm.options['print_global'] = False
+
         self.positions = init_position.copy()
         self.f_val = init_f_val.copy()
 
@@ -51,17 +48,27 @@ class Surrogate():
         """
         Docstring: TODO
         """
-        self.sm.set_training_values(self.positions, self.f_val)
-        self.sm.train()
+        self.sm.updateModel(self.positions, self.f_val[:, None], None, None)
 
     def predict(self, point):
         """
         Docstring: TODO
         """
         assert point.shape[1] == (self.dim), f'The dimension of the point does not match with the dimension of the model. Expect dimension {self.dim}, got {point.shape[0]}'
-        predict_val = self.sm.predict_values(point)
-        predict_var = self.sm.predict_variances(point)
-        return predict_val, predict_var
+        predict_mean, predict_std = self.sm.predict(point)
+        return predict_mean, predict_std
+
+    def get_prediction_point(self, constr):
+        mixed_domain = []
+        for c in constr:
+            dim_dict = {'name': 'var1', 'type': 'continuous', 'domain': tuple(c)}
+            mixed_domain.append(dim_dict)
+        space = GPyOpt.Design_space(mixed_domain)
+
+        acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
+        acquisition = GPyOpt.acquisitions.EI.AcquisitionEI(self.sm, space, acquisition_optimizer)
+        prediction = acquisition.optimize()
+        return prediction
 
     def plotter_3d(self):
         """
