@@ -3,6 +3,7 @@ TODO: Docstring
 """
 
 import numpy as np
+from scipy.stats import norm
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
@@ -59,7 +60,8 @@ class Surrogate():
         """
         assert point.shape[1] == (self.dim), f'The dimension of the point does not match with the dimension of the model. Expect dimension {self.dim}, got {point.shape[0]}'
         predict_val = self.sm.predict_values(point)
-        return predict_val
+        predict_var = self.sm.predict_variances(point)
+        return predict_val, predict_var
 
     def plotter_3d(self):
         """
@@ -74,7 +76,7 @@ class Surrogate():
         y = y.flatten()
         flat_grid = np.array([x, y]).T
 
-        predict_val = self.predict(flat_grid)
+        predict_val, _ = self.predict(flat_grid)
 
         predict_val_reshaped = np.reshape(predict_val, (num, num))
 
@@ -82,9 +84,5 @@ class Surrogate():
 
         fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_val_reshaped)])
         fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_val, mode='markers'))
-
-        # fig.update_layout(autosize=False,
-        #           width=500, height=500,
-        #           margin=dict(l=65, r=50, b=65, t=90))
         fig.show()
         print(80 * "*")
