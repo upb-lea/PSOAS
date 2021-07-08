@@ -146,10 +146,9 @@ class Swarm():
         comp_identity = 2*np.ones((self.n_particles, self.dim))
 
         U_1 = uniform_distribution(self.n_particles, self.dim)
-        U_2 = uniform_distribution(self.n_particles, self.dim)
 
         proj_pbest = self.position + c_1 * 2 * U_1 * (self.pbest_position - self.position)
-        proj_lbest = self.position + c_2 * (comp_identity - 2 * U_2) * (lbest_position - self.position)
+        proj_lbest = self.position + c_2 * (comp_identity - 2 * U_1) * (lbest_position - self.position)
 
         center = (self.position + proj_pbest + proj_lbest) / 3
 
