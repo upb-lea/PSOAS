@@ -9,6 +9,7 @@ Typical usage example:
 import numpy as np
 import pprint
 import tableprint as tp
+from tqdm import tqdm
 
 from psoas.swarm import Swarm
 from psoas.surrogate import Surrogate
@@ -23,7 +24,7 @@ class Optimizer():
     algorithm on benchmark-/testfunctions.
     """
 
-    def __init__(self, func, n_particles, dim, constr, max_iter=100, options=None):
+    def __init__(self, func, n_particles, dim, constr, max_iter, **kwargs):
         """Creates and initializes an optimizer class instance.
 
         This function creates all class attributes which are necessary for an optimization process.
@@ -51,12 +52,21 @@ class Optimizer():
                                               '3d_plot': False,
                                               'plotting_interval': 10}
                         }
-        if options is not None:
-            for key in options.keys():
-                if key in ['swarm_options', 'surrogate_options']:
-                    self.options[key].update(options[key])
-                else:
-                    self.options[key] = options[key]
+
+        for key, value in kwargs.items():
+            if type(value) is dict:
+                for inner_key, inner_value in value.items():
+                    if inner_key not in self.options[key]:
+                        raise NameError(f'The key "{inner_key}" does not exist in the dict.')
+                    
+                    else:
+                        self.options[key][inner_key] = inner_value
+                    
+            elif key in self.options:
+                self.options[key] = value
+            
+            else:
+                raise NameError(f'The key "{key}" does not exist in the dict.')
 
         self.func = func
         self.max_iter = max_iter
@@ -70,6 +80,7 @@ class Optimizer():
         self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
         self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
         self.velocity_reset = np.zeros((n_particles, dim))
+
 
     def update_swarm(self):
         """Updates the Swarm instance.
@@ -115,7 +126,7 @@ class Optimizer():
         small_change_counter = 0
 
         results = {"gbest_list":[], "iter": None}
-        for i in range(self.max_iter):
+        for i in tqdm(range(self.max_iter)):
             prior_pbest = self.Swarm.pbest.copy()
             prior_gbest, _  = self.Swarm.compute_gbest()
 
@@ -162,6 +173,11 @@ class Optimizer():
             results['iter'] = self.max_iter
             results['term_flag'] = 1
         return results
+
+
+    def stalling(self):
+        raise NotImplementedError
+
 
     def enforce_constraints(self, check_position, check_velocity):
         """Enforces the constraints of the valid search space.
