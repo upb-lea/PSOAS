@@ -39,16 +39,19 @@ class Swarm():
         
 
         # preparation for contur plot
-        self.data_plot = {}
-        delta = 0.1
-        B = np.arange(-100, 100, delta)
-        self.data_plot['x'] = B
-        self.data_plot['y'] = B
-        xx, yy = np.meshgrid(B,B, sparse=True)
-        self.data_plot['z'] = np.zeros((xx.shape[1], yy.shape[0]))
-        for i in range(xx.shape[1]):
-            for j in range(yy.shape[0]):
-                self.data_plot['z'][i,j] = self.func(np.array([xx[0][i], yy[j][0]]))
+        if swarm_options['3d_plot'] is True:
+            assert dim == 2, f'Got dim {self.dim}. Expect dim 2.'
+
+            self.data_plot = {}
+            delta = 0.1
+            B = np.arange(-100, 100, delta)
+            self.data_plot['x'] = B
+            self.data_plot['y'] = B
+            xx, yy = np.meshgrid(B,B, sparse=True)
+            self.data_plot['z'] = np.zeros((xx.shape[1], yy.shape[0]))
+            for i in range(xx.shape[1]):
+                for j in range(yy.shape[0]):
+                    self.data_plot['z'][i,j] = self.func(np.array([xx[0][i], yy[j][0]]))
 
     def evaluate_function(self, x):
         """
@@ -131,7 +134,6 @@ class Swarm():
         # gbest, gbest_position = self.compute_gbest()
         
         c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
-        omega = 1 / (2*np.log(2))
        
         U_1 = uniform_distribution(self.n_particles, self.dim)
         U_2 = uniform_distribution(self.n_particles, self.dim)
@@ -147,32 +149,7 @@ class Swarm():
 
         sample_points = center + offset
         
-        self.velocity = omega * self.velocity + sample_points - self.position
-
-    def _velocity_update_MSPSO2011(self):
-        """
-        This implementation of the velocity update is based on the paper Hariya2016, based on the SPSO2011.
-        """
-        lbest, lbest_position = self.compute_lbest()
-
-        c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
         omega = 1 / (2*np.log(2))
-
-        comp_identity = 2*np.ones((self.n_particles, self.dim))
-
-        U_1 = uniform_distribution(self.n_particles, self.dim)
-
-        proj_pbest = self.position + c_1 * 2 * U_1 * (self.pbest_position - self.position)
-        proj_lbest = self.position + c_2 * (comp_identity - 2 * U_1) * (lbest_position - self.position)
-
-        center = (self.position + proj_pbest + proj_lbest) / 3
-
-        r = np.linalg.norm(center - self.position, axis=1)
-
-        offset = random_hypersphere_draw(r, self.dim)
-
-        sample_points = center + offset
-        
         self.velocity = omega * self.velocity + sample_points - self.position
 
     def compute_velocity(self):
@@ -181,10 +158,6 @@ class Swarm():
         """
         if self.swarm_options['mode'] == 'SPSO2011':
             self._velocity_update_SPSO2011()
-
-        elif self.swarm_options['mode'] == 'MSPSO2011':
-            self._velocity_update_MSPSO2011()
-
         else:
             raise NotImplementedError()
 
