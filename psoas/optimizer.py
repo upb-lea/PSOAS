@@ -10,6 +10,7 @@ import numpy as np
 import pprint
 import tableprint as tp
 
+from psoas.operations import normal_distribution
 from psoas.swarm import Swarm
 from psoas.surrogate import Surrogate
 
@@ -46,7 +47,8 @@ class Optimizer():
                         'verbose': False,
                         'verbose_interval': 50,
                         'swarm_options': {'mode': 'SPSO2011', 
-                                          'topology': 'global'}, 
+                                          'topology': 'global',
+                                          '3d_plot': False}, 
                         'surrogate_options': {'surrogate_type': 'GP',
                                               'use_surrogate': True,
                                               '3d_plot': False,
@@ -60,6 +62,7 @@ class Optimizer():
                     self.options[key] = options[key]
 
         self.func = func
+        self.dim = dim
         self.max_iter = max_iter
         self.Swarm = Swarm(func, n_particles, dim, constr, self.options['swarm_options'])
 
@@ -125,16 +128,18 @@ class Optimizer():
             if (hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['use_surrogate']
                 and i % self.options['surrogate_options']['interval'] == 0):
                 self.update_surrogate()
+
                 prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
                 prediction_point = prediction[0][0]
                 f_val_at_pred = self.func(prediction_point)
+
+                self.SurrogateModel.update_data(prediction_point[None,:], np.array([f_val_at_pred]))
 
                 idx = np.argmax(self.Swarm.pbest)
 
                 self.Swarm.position[idx] = prediction_point
                 self.Swarm.f_values[idx] = f_val_at_pred
-
-                # TODO: add to database, velocity?
+                self.Swarm.velocity[idx] = normal_distribution(1, self.dim)
 
                 if f_val_at_pred < self.Swarm.pbest[idx]:
                     self.Swarm.pbest[idx] = f_val_at_pred

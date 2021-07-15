@@ -1,7 +1,9 @@
 """Implementation of the Swarm class for the Particle Swarm Optimization (PSO)."""
 
+import matplotlib.pyplot as plt
 from smt.sampling_methods import LHS
 import numpy as np
+
 
 from psoas.operations import normal_distribution, random_hypersphere_draw, uniform_distribution
 
@@ -34,6 +36,19 @@ class Swarm():
         self.dim = dim
         self.constr = constr
         self._calculate_initial_values()
+        
+
+        # preparation for contur plot
+        self.data_plot = {}
+        delta = 0.1
+        B = np.arange(-100, 100, delta)
+        self.data_plot['x'] = B
+        self.data_plot['y'] = B
+        xx, yy = np.meshgrid(B,B, sparse=True)
+        self.data_plot['z'] = np.zeros((xx.shape[1], yy.shape[0]))
+        for i in range(xx.shape[1]):
+            for j in range(yy.shape[0]):
+                self.data_plot['z'][i,j] = self.func(np.array([xx[0][i], yy[j][0]]))
 
     def evaluate_function(self, x):
         """
@@ -196,3 +211,12 @@ class Swarm():
 
         best_indices = np.argmin(informed_particles, axis=1)
         return self.pbest[best_indices], self.pbest_position[best_indices]
+
+    def plotter(self):
+        plt.plot(self.position[:,0], self.position[:,1], 'o')
+        plt.contourf(self.data_plot['x'], self.data_plot['y'], self.data_plot['z'])
+        plt.quiver(self.position[:,0], self.position[:,1], self.velocity[:,0], self.velocity[:,1], units='xy', scale_units='xy', scale=1)
+
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.show()
