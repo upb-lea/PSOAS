@@ -33,6 +33,24 @@ class Evaluation():
             display(self.df)
         except:
             print(self.df)
+    
+    @staticmethod
+    def plot_percentiles(data, key):
+        y_data = np.fromiter(data[key].values(), dtype=np.float)
+        x_data = np.linspace(0, 100, 1000)
+        percentile = np.percentile(y_data, x_data)
+        plt.plot(x_data, percentile)
+        plt.xlabel('percentage')
+        plt.ylabel(f'percentile for {key}')
+        plt.show()
+    
+    @staticmethod
+    def plot_histogram(data, key):
+        y_data = np.fromiter(data[key].values(), dtype=np.float)
+        plt.hist(y_data, bins=100)
+        plt.xlabel('bins')
+        plt.ylabel(f'histogram for {key}')
+        plt.show()
 
 
 class EvaluationSingle(Evaluation):
@@ -94,6 +112,12 @@ class EvaluationSingle(Evaluation):
             stats_dict[key] = np.round(stats_dict[key], 5)
         return stats_dict
 
+    def plot_percentiles(self, key):
+        super().plot_percentiles(self.df.to_dict(), key)
+
+    def plot_histogram(self, key):
+        super().plot_histogram(self.df.to_dict(), key)
+
 
 class EvaluationHyperparameters(Evaluation):    
     """
@@ -124,6 +148,8 @@ class EvaluationFunctionSet(Evaluation):
         keys = ['mean_iters', 'mean', 'var', 'min', 'max', 'mean_diff', 'var_diff', 'min_diff', 'max_diff']
         self.df = pd.DataFrame(columns=keys, index=range(0,28))
 
+        self.results = {}
+
         for idx in tqdm(range(1,29)):
             func = bench.get_function(idx)
             info = bench.get_info(idx, dim)
@@ -131,6 +157,15 @@ class EvaluationFunctionSet(Evaluation):
 
             eval_single = EvaluationSingle(func, constraints, opt_value=info['best'])
             eval_single.evaluate_function(self.n_particles, self.dim, self.max_iter, options, n_runs)
+            self.results[str(idx)] = eval_single.df.to_dict()
 
             func_stat_data = eval_single.get_statistical_information()
             self.df.iloc[idx-1] = pd.Series(func_stat_data)
+        
+        self.results['summary'] = self.df.to_dict()
+
+    def plot_percentiles(self, func_idx, key):
+        super().plot_percentiles(self.results[str(func_idx)], key)
+
+    def plot_histogram(self, func_idx, key):
+        super().plot_histogram(self.results[str(func_idx)], key)
