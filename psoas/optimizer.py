@@ -12,7 +12,7 @@ import pprint
 import tableprint as tp
 from tqdm import tqdm
 
-from psoas.operations import normal_distribution
+from psoas.operations import normal_distribution, counting_function, counting_function_cec2013_single
 from psoas.swarm import Swarm
 from psoas.surrogate import Surrogate
 
@@ -56,7 +56,8 @@ class Optimizer():
                         'surrogate_options': {'surrogate_type': 'GP',
                                               'use_surrogate': True,
                                               '3d_plot': False,
-                                              'interval': 10}
+                                              'interval': 10,
+                                              'prediction_mode': 'standard'}
                         }
 
         for key, value in kwargs.items():
@@ -74,10 +75,10 @@ class Optimizer():
             else:
                 raise NameError(f'The key "{key}" does not exist in the dict.')
 
-        self.func = func
+        self.func = counting_function_cec2013_single(func)
         self.dim = dim
         self.max_iter = max_iter
-        self.Swarm = Swarm(func, n_particles, dim, constr, self.options['swarm_options'])
+        self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'])
 
         if 'surrogate_type' in self.options['surrogate_options'].keys():
             self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, 
@@ -114,10 +115,32 @@ class Optimizer():
 
     def update_surrogate(self):
         """
-        Docstring: TODO
+        TODO: docstring
         """
         self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values)
         self.SurrogateModel.fit_model()
+
+    def use_surrogate_prediction(self):
+        """
+        TODO: docstring
+        """
+        if self.options['surrogate_options']['prediction_mode'] == 'standard':
+            prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+            prediction_point = prediction[0][0]
+            f_val_at_pred = self.func(prediction_point[None,:])
+
+            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred)
+
+            idx = np.argmax(self.Swarm.pbest)
+
+            self.Swarm.position[idx] = prediction_point
+            self.Swarm.f_values[idx] = f_val_at_pred
+            self.Swarm.velocity[idx] = normal_distribution(1, self.dim)
+
+            if f_val_at_pred < self.Swarm.pbest[idx]:
+                self.Swarm.pbest[idx] = f_val_at_pred
+                self.Swarm.pbest_position[idx] = prediction_point
+
 
     def optimize(self):
         """Main optimization routine.
@@ -138,6 +161,7 @@ class Optimizer():
             results["gbest_list"] = []
             results["mean_pbest_list"] = []
             results["var_pbest_list"] = []
+            results["n_fun_eval_list"] = []
 
         for i in range(self.max_iter):
             prior_pbest = self.Swarm.pbest.copy()
@@ -145,27 +169,19 @@ class Optimizer():
 
             self.update_swarm()
 
+<<<<<<< HEAD
             self.Swarm.plotter()
 
             if (hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['use_surrogate']
+=======
+            if (self.options['surrogate_options']['use_surrogate']
+>>>>>>> c79734ac4bb48b5b8df6fe8f693e0a52772c314e
                 and i % self.options['surrogate_options']['interval'] == 0):
+
+                assert hasattr(self, 'SurrogateModel')
                 self.update_surrogate()
 
-                prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
-                prediction_point = prediction[0][0]
-                f_val_at_pred = self.func(prediction_point)
-
-                self.SurrogateModel.update_data(prediction_point[None,:], np.array([f_val_at_pred]))
-
-                idx = np.argmax(self.Swarm.pbest)
-
-                self.Swarm.position[idx] = prediction_point
-                self.Swarm.f_values[idx] = f_val_at_pred
-                self.Swarm.velocity[idx] = normal_distribution(1, self.dim)
-
-                if f_val_at_pred < self.Swarm.pbest[idx]:
-                    self.Swarm.pbest[idx] = f_val_at_pred
-                    self.Swarm.pbest_position[idx] = prediction_point
+                self.use_surrogate_prediction()
 
                 if self.options['surrogate_options']['3d_plot']:
                     self.SurrogateModel.plotter_3d()
@@ -186,6 +202,7 @@ class Optimizer():
                 results['gbest_list'].append(gbest)
                 results['mean_pbest_list'].append(np.mean(self.Swarm.pbest))
                 results['var_pbest_list'].append(np.var(self.Swarm.pbest))
+                results["n_fun_eval_list"].append(self.func.eval_count)
 
             if self.options['verbose']:
                 self.print_iteration_information(i, gbest)
@@ -213,6 +230,7 @@ class Optimizer():
         results['var_pbest'] = np.var(self.Swarm.pbest)
         results['x_opt'] = gbest_position
         results['func_opt'] = gbest
+        results['n_fun_evals'] = self.func.eval_count
 
         return results
 
@@ -266,7 +284,7 @@ class Optimizer():
         gbest = np.array(results['gbest_list'])
         mean_pbest = np.array(results['mean_pbest_list'])
         var_pbest = np.array(results['var_pbest_list'])
-        x = np.arange(0, results['iter'])
+        x = np.array(results['n_fun_eval_list'])
 
         fig, axs = plt.subplots(nrows=2, sharex=True, figsize=(12,12))
         axs[0].plot(x, gbest, color='orange')
@@ -277,6 +295,6 @@ class Optimizer():
         
 
         axs[1].set_ylabel('mean +- std pbest fval')
-        axs[1].set_xlabel('iterations')
+        axs[1].set_xlabel('function evaluations')
 
         fig.show()
