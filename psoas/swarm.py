@@ -131,6 +131,7 @@ class Swarm():
         # gbest, gbest_position = self.compute_gbest()
         
         c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
+        omega = 1 / (2*np.log(2))
        
         U_1 = uniform_distribution(self.n_particles, self.dim)
         U_2 = uniform_distribution(self.n_particles, self.dim)
@@ -146,7 +147,32 @@ class Swarm():
 
         sample_points = center + offset
         
+        self.velocity = omega * self.velocity + sample_points - self.position
+
+    def _velocity_update_MSPSO2011(self):
+        """
+        This implementation of the velocity update is based on the paper Hariya2016, based on the SPSO2011.
+        """
+        lbest, lbest_position = self.compute_lbest()
+
+        c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
         omega = 1 / (2*np.log(2))
+
+        comp_identity = 2*np.ones((self.n_particles, self.dim))
+
+        U_1 = uniform_distribution(self.n_particles, self.dim)
+
+        proj_pbest = self.position + c_1 * 2 * U_1 * (self.pbest_position - self.position)
+        proj_lbest = self.position + c_2 * (comp_identity - 2 * U_1) * (lbest_position - self.position)
+
+        center = (self.position + proj_pbest + proj_lbest) / 3
+
+        r = np.linalg.norm(center - self.position, axis=1)
+
+        offset = random_hypersphere_draw(r, self.dim)
+
+        sample_points = center + offset
+        
         self.velocity = omega * self.velocity + sample_points - self.position
 
     def compute_velocity(self):
@@ -155,6 +181,10 @@ class Swarm():
         """
         if self.swarm_options['mode'] == 'SPSO2011':
             self._velocity_update_SPSO2011()
+
+        elif self.swarm_options['mode'] == 'MSPSO2011':
+            self._velocity_update_MSPSO2011()
+
         else:
             raise NotImplementedError()
 
