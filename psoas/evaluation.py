@@ -25,7 +25,7 @@ class Evaluation():
         self.df = pd.DataFrame.from_dict(data_dict)
 
     def _optimize_function(self, func, n_particles, dim, constr, max_iter, options=None):
-        opt = Optimizer(func, n_particles, dim, constr, max_iter, options)
+        opt = Optimizer(func, n_particles, dim, constr, max_iter, **options)
         return opt.optimize()
 
     def print_tables(self):

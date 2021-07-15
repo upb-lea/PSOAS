@@ -35,8 +35,8 @@ class Swarm():
         self.n_particles = n_particles
         self.dim = dim
         self.constr = constr
-        self._calculate_initial_values()
         
+        self._calculate_initial_values()        
 
         # preparation for contur plot
         if swarm_options['3d_plot'] is True:
@@ -59,12 +59,7 @@ class Swarm():
 
         This function asserts that the input is in shape (self.n_particles, self.dim), i.e. that 
         the given function is evaluated for each particle at the current position in the 
-        self.dim-dimensional space. Therefore the output is of shape (self.n_particles,). While 
-        it is generally preferable to use functions which take such input shapes and deliver such 
-        a result, it is not enforced here. It is also possible to optimize on a function which 
-        takes one point in the search space as the input and delivers a scalar output. This case 
-        is implemented as a for loop in Python which makes it rather inefficient in comparison
-        to the matrix approach.
+        self.dim-dimensional space. Therefore the output is of shape (self.n_particles,).
 
         Args:
             x: Positions of all particles in the search space to be evaluated, shape is (self.n_particles, self.dim)
@@ -73,14 +68,9 @@ class Swarm():
             An array with the function evaluation for each particle with shape (self.n_particles,)
         """
         assert x.shape == (self.n_particles, self.dim)
-        
-        try:
-            res = self.func(x)
-            assert res.shape == (self.n_particles,)
-        except (ValueError, AssertionError):
-            res = np.zeros(self.n_particles)
-            for idx in range(self.n_particles):
-                res[idx] = self.func(x[idx, :])
+
+        res = self.func(x)
+        assert res.shape == (self.n_particles,)
 
         return res
 
@@ -97,7 +87,7 @@ class Swarm():
         self.velocity = (lhs_sampling(self.n_particles) - self.position)/2
 
         self.pbest_position = self.position
-        self.pbest = self.evaluate_function(self.position)
+        self.pbest = self.f_values
 
     def compute_gbest(self):
         """Returns the global optimum found by any of the particles."""

@@ -19,3 +19,24 @@ def random_hypersphere_draw(r, dim):
     u /= u_norm[:,None]
     u *= r[:,None]
     return u[:,:dim]
+
+
+class counting_function():
+    def __init__(self, function):
+        self.eval_count = 0
+        self.function = function
+
+    def __call__(self, x):
+        self.eval_count += 1
+        return self.function(x)
+
+
+class counting_function_cec2013_single(counting_function):
+    def __call__(self, x):
+        length = x.shape[0]
+        self.eval_count += length
+
+        res = np.zeros(length)
+        for idx in range(length):
+            res[idx] = self.function(x[idx, :])
+        return res
