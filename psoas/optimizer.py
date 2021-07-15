@@ -51,7 +51,8 @@ class Optimizer():
                         'do_plots': False,
                         'swarm_options': {'mode': 'SPSO2011', 
                                           'topology': 'global',
-                                          '3d_plot': False}, 
+                                          '3d_plot': False,
+                                          'create_gif': False}, 
                         'surrogate_options': {'surrogate_type': 'GP',
                                               'use_surrogate': True,
                                               '3d_plot': False,
@@ -144,6 +145,8 @@ class Optimizer():
 
             self.update_swarm()
 
+            self.Swarm.plotter()
+
             if (hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['use_surrogate']
                 and i % self.options['surrogate_options']['interval'] == 0):
                 self.update_surrogate()
@@ -202,6 +205,9 @@ class Optimizer():
 
         if self.options['do_plots']:
             self.plot_results(results)
+
+        if self.options['swarm_options']['create_gif']:
+            self.Swarm.create_gif()
         
         results['mean_pbest'] = np.mean(self.Swarm.pbest)
         results['var_pbest'] = np.var(self.Swarm.pbest)

@@ -3,7 +3,8 @@
 import matplotlib.pyplot as plt
 from smt.sampling_methods import LHS
 import numpy as np
-
+import os
+import imageio
 
 from psoas.operations import normal_distribution, random_hypersphere_draw, uniform_distribution
 
@@ -52,6 +53,9 @@ class Swarm():
             for i in range(xx.shape[1]):
                 for j in range(yy.shape[0]):
                     self.data_plot['z'][i,j] = self.func(np.array([xx[0][i], yy[j][0]]))
+        
+        self.gif_counter = 0
+        self.gif_filenames = []
 
     def evaluate_function(self, x):
         """
@@ -220,6 +224,34 @@ class Swarm():
         plt.contourf(self.data_plot['x'], self.data_plot['y'], self.data_plot['z'])
         plt.quiver(self.position[:,0], self.position[:,1], self.velocity[:,0], self.velocity[:,1], units='xy', scale_units='xy', scale=1)
 
+        plt.xlim((-100, 100))
+        plt.ylim((-100, 100))
+
         plt.xlabel("x")
         plt.ylabel("y")
+
+        if self.swarm_options['create_gif']:
+
+
+            filename = f'{self.gif_counter}.png'
+            self.gif_filenames.append(filename)
+    
+            # save frame
+            plt.savefig(filename)
+            plt.close()
+            self.gif_counter += 1
         plt.show()
+    
+    def create_gif(self):
+
+        with imageio.get_writer('PSO.gif', mode='I') as writer:
+
+            for filename in self.gif_filenames:
+
+                image = imageio.imread(filename)
+                writer.append_data(image)
+
+        print('Gif has been written.')
+        # Remove files
+        for filename in set(self.gif_filenames):
+            os.remove(filename)
