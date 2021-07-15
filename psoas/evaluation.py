@@ -69,7 +69,7 @@ class EvaluationSingle(Evaluation):
             self.opt_value = opt_value
 
     def evaluate_function(self, n_particles, dim, max_iter, options, n_runs):
-        keys = ['n_iter', 'term_flag', 'func_opt', 'mean_pbest', 'var_pbest']
+        keys = ['n_iter', 'n_fun_evals', 'term_flag', 'func_opt', 'mean_pbest', 'var_pbest']
         if hasattr(self, 'ground_truth'):
             keys.append('dist_gt')
         if hasattr(self, 'opt_value'):
@@ -79,6 +79,7 @@ class EvaluationSingle(Evaluation):
         for i in range(n_runs):
             res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, options)
             self.df.loc[i, 'n_iter'] = res['iter']
+            self.df.loc[i, 'n_fun_evals'] = res['n_fun_evals']
             self.df.loc[i, 'term_flag'] = res['term_flag']
             self.df.loc[i, 'func_opt'] = res['func_opt']
             self.df.loc[i, 'mean_pbest'] = res['mean_pbest']
@@ -91,6 +92,7 @@ class EvaluationSingle(Evaluation):
         
     def get_statistical_information(self):
         mean_iters = np.mean(self.df['n_iter'])
+        mean_fun_evals = np.mean(self.df['n_fun_evals'])
         mean = np.mean(self.df['func_opt'])
         var = np.var(self.df['func_opt'])
         min = np.min(self.df['func_opt'])
@@ -103,9 +105,9 @@ class EvaluationSingle(Evaluation):
         min_diff = np.min(diff)
         max_diff = np.max(diff)
     
-        stats_dict = {'mean_iters': mean_iters, 'mean': mean, 'var': var,
-                      'min': min, 'max': max, 'mean_diff': mean_diff, 
-                      'var_diff': var_diff, 'min_diff': min_diff, 
+        stats_dict = {'mean_iters': mean_iters, 'mean_fun_evals': mean_fun_evals,
+                      'mean': mean, 'var': var, 'min': min, 'max': max, 
+                      'mean_diff': mean_diff, 'var_diff': var_diff, 'min_diff': min_diff, 
                       'max_diff': max_diff}
     
         for key in stats_dict.keys():
@@ -145,7 +147,7 @@ class EvaluationFunctionSet(Evaluation):
         self.dim = dim
         self.max_iter = max_iter
 
-        keys = ['mean_iters', 'mean', 'var', 'min', 'max', 'mean_diff', 'var_diff', 'min_diff', 'max_diff']
+        keys = ['mean_iters', 'mean_fun_evals', 'mean', 'var', 'min', 'max', 'mean_diff', 'var_diff', 'min_diff', 'max_diff']
         self.df = pd.DataFrame(columns=keys, index=range(0,28))
 
         self.results = {}

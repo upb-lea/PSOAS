@@ -126,9 +126,9 @@ class Optimizer():
         if self.options['surrogate_options']['prediction_mode'] == 'standard':
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
             prediction_point = prediction[0][0]
-            f_val_at_pred = self.func(prediction_point)
+            f_val_at_pred = self.func(prediction_point[None,:])
 
-            self.SurrogateModel.update_data(prediction_point[None,:], np.array([f_val_at_pred]))
+            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred)
 
             idx = np.argmax(self.Swarm.pbest)
 
@@ -160,6 +160,7 @@ class Optimizer():
             results["gbest_list"] = []
             results["mean_pbest_list"] = []
             results["var_pbest_list"] = []
+            results["n_fun_eval_list"] = []
 
         for i in range(self.max_iter):
             prior_pbest = self.Swarm.pbest.copy()
@@ -194,6 +195,7 @@ class Optimizer():
                 results['gbest_list'].append(gbest)
                 results['mean_pbest_list'].append(np.mean(self.Swarm.pbest))
                 results['var_pbest_list'].append(np.var(self.Swarm.pbest))
+                results["n_fun_eval_list"].append(self.func.eval_count)
 
             if self.options['verbose']:
                 self.print_iteration_information(i, gbest)
@@ -218,6 +220,7 @@ class Optimizer():
         results['var_pbest'] = np.var(self.Swarm.pbest)
         results['x_opt'] = gbest_position
         results['func_opt'] = gbest
+        results['n_fun_evals'] = self.func.eval_count
 
         return results
 
@@ -271,7 +274,7 @@ class Optimizer():
         gbest = np.array(results['gbest_list'])
         mean_pbest = np.array(results['mean_pbest_list'])
         var_pbest = np.array(results['var_pbest_list'])
-        x = np.arange(0, results['iter'])
+        x = np.array(results['n_fun_eval_list'])
 
         fig, axs = plt.subplots(nrows=2, sharex=True, figsize=(12,12))
         axs[0].plot(x, gbest, color='orange')
@@ -282,6 +285,6 @@ class Optimizer():
         
 
         axs[1].set_ylabel('mean +- std pbest fval')
-        axs[1].set_xlabel('iterations')
+        axs[1].set_xlabel('function evaluations')
 
         fig.show()
