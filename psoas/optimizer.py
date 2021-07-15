@@ -50,7 +50,7 @@ class Optimizer():
                         'surrogate_options': {'surrogate_type': 'GP',
                                               'use_surrogate': True,
                                               '3d_plot': False,
-                                              'plotting_interval': 10}
+                                              'interval': 10}
                         }
         if options is not None:
             for key in options.keys():
@@ -123,7 +123,7 @@ class Optimizer():
             self.update_swarm()
 
             if (hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['use_surrogate']
-                and i % self.options['surrogate_options']['plotting_interval'] == 0):
+                and i % self.options['surrogate_options']['interval'] == 0):
                 self.update_surrogate()
                 prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
                 prediction_point = prediction[0][0]
@@ -133,6 +133,8 @@ class Optimizer():
 
                 self.Swarm.position[idx] = prediction_point
                 self.Swarm.f_values[idx] = f_val_at_pred
+
+                # TODO: add to database, velocity?
 
                 if f_val_at_pred < self.Swarm.pbest[idx]:
                     self.Swarm.pbest[idx] = f_val_at_pred
