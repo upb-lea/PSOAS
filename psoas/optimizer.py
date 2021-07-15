@@ -7,6 +7,7 @@ Typical usage example:
     result = opt.optimize()
 """
 import numpy as np
+import matplotlib.pyplot as plt
 import pprint
 import tableprint as tp
 
@@ -45,6 +46,7 @@ class Optimizer():
                         'stalling_steps': 10,
                         'verbose': False,
                         'verbose_interval': 50,
+                        'do_plots': False,
                         'swarm_options': {'mode': 'SPSO2011', 
                                           'topology': 'global'}, 
                         'surrogate_options': {'surrogate_type': 'KRG',
@@ -114,7 +116,13 @@ class Optimizer():
         """
         small_change_counter = 0
 
-        results = {"gbest_list":[], "iter": None}
+        results = {"iter": None}
+
+        if self.options['do_plots']:
+            results["gbest_list"] = []
+            results["mean_pbest_list"] = []
+            results["var_pbest_list"] = []
+
         for i in range(self.max_iter):
             prior_pbest = self.Swarm.pbest.copy()
             prior_gbest, _  = self.Swarm.compute_gbest()
@@ -128,8 +136,6 @@ class Optimizer():
                 self.SurrogateModel.plotter_3d()
 
             gbest, gbest_position = self.Swarm.compute_gbest()
-            results['gbest_list'].append(gbest)
-
             self.Swarm.no_change_in_gbest = (prior_gbest - gbest == 0)
 
             mean_squared_change = np.linalg.norm(prior_pbest - self.Swarm.pbest)
@@ -141,6 +147,11 @@ class Optimizer():
             else:
                 small_change_counter = 0
             
+            if self.options['do_plots']:
+                results['gbest_list'].append(gbest)
+                results['mean_pbest_list'].append(np.mean(self.Swarm.pbest))
+                results['var_pbest_list'].append(np.var(self.Swarm.pbest))
+
             if self.options['verbose']:
                 self.print_iteration_information(i, gbest)
 
@@ -149,18 +160,22 @@ class Optimizer():
                 results['term_flag'] = 2
                 break
 
+        if results['iter'] == None:
+            results['iter'] = self.max_iter
+            results['term_flag'] = 1
+
         if self.options['verbose']:
             print(tp.bottom(len(self.headers), width=20))
             print('\n')
 
-
+        if self.options['do_plots']:
+            self.plot_results(results)
+        
         results['mean_pbest'] = np.mean(self.Swarm.pbest)
         results['var_pbest'] = np.var(self.Swarm.pbest)
         results['x_opt'] = gbest_position
         results['func_opt'] = gbest
-        if results['iter'] == None:
-            results['iter'] = self.max_iter
-            results['term_flag'] = 1
+
         return results
 
     def enforce_constraints(self, check_position, check_velocity):
@@ -203,3 +218,22 @@ class Optimizer():
             assert len(data) == len(self.headers)
 
             print(tp.row(data, width=20))
+
+    def plot_results(self, results):
+        gbest = np.array(results['gbest_list'])
+        mean_pbest = np.array(results['mean_pbest_list'])
+        var_pbest = np.array(results['var_pbest_list'])
+        x = np.arange(0, results['iter'])
+
+        fig, axs = plt.subplots(nrows=2, sharex=True, figsize=(12,12))
+        axs[0].plot(x, gbest, color='orange')
+        axs[0].set_ylabel('gbest fval')
+        axs[1].plot(x, mean_pbest, color='tab:blue')
+        axs[1].fill_between(x, mean_pbest - np.sqrt(var_pbest), mean_pbest + np.sqrt(var_pbest),
+                            color='tab:blue', alpha=0.2)
+        
+
+        axs[1].set_ylabel('mean +- std pbest fval')
+        axs[1].set_xlabel('iterations')
+
+        fig.show()
