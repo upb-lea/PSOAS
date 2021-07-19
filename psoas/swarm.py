@@ -39,12 +39,12 @@ class Swarm():
         
         self._calculate_initial_values()        
 
-        # preparation for contur plot
+        # preparation for contour plot
         if swarm_options['3d_plot'] is True:
             assert dim == 2, f'Got dim {self.dim}. Expect dim 2.'
 
             self.data_plot = {}
-            self.data_plot = self.get_contur(self.data_plot)
+            self.data_plot = self.get_contour(self.data_plot)
             self.gif_counter = 0
             self.gif_filenames = []
 
@@ -200,7 +200,7 @@ class Swarm():
         best_indices = np.argmin(informed_particles, axis=1)
         return self.pbest[best_indices], self.pbest_position[best_indices]
 
-    def get_contur(self, data_plot):
+    def get_contour(self, data_plot):
         delta = 0.1
         B = np.arange(-100, 100, delta)
         data_plot['x'] = B
