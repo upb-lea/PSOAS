@@ -169,13 +169,7 @@ class Optimizer():
 
             self.update_swarm()
 
-<<<<<<< HEAD
-            self.Swarm.plotter()
-
-            if (hasattr(self, 'SurrogateModel') and self.options['surrogate_options']['use_surrogate']
-=======
             if (self.options['surrogate_options']['use_surrogate']
->>>>>>> c79734ac4bb48b5b8df6fe8f693e0a52772c314e
                 and i % self.options['surrogate_options']['interval'] == 0):
 
                 assert hasattr(self, 'SurrogateModel')
