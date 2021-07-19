@@ -44,18 +44,9 @@ class Swarm():
             assert dim == 2, f'Got dim {self.dim}. Expect dim 2.'
 
             self.data_plot = {}
-            delta = 0.1
-            B = np.arange(-100, 100, delta)
-            self.data_plot['x'] = B
-            self.data_plot['y'] = B
-            xx, yy = np.meshgrid(B,B, sparse=True)
-            self.data_plot['z'] = np.zeros((xx.shape[1], yy.shape[0]))
-            for i in range(xx.shape[1]):
-                for j in range(yy.shape[0]):
-                    self.data_plot['z'][i,j] = self.func(np.array([xx[0][i], yy[j][0]]))
-        
-        self.gif_counter = 0
-        self.gif_filenames = []
+            self.data_plot = self.get_contur(self.data_plot)
+            self.gif_counter = 0
+            self.gif_filenames = []
 
     def evaluate_function(self, x):
         """
@@ -209,7 +200,24 @@ class Swarm():
         best_indices = np.argmin(informed_particles, axis=1)
         return self.pbest[best_indices], self.pbest_position[best_indices]
 
+    def get_contur(self, data_plot):
+        delta = 0.1
+        B = np.arange(-100, 100, delta)
+        data_plot['x'] = B
+        data_plot['y'] = B
+
+        xx, yy = np.meshgrid(B,B, sparse=True)
+        data_plot['z'] = np.zeros((xx.shape[1], yy.shape[0]))
+
+        for i in range(xx.shape[1]):
+            for j in range(yy.shape[0]):
+                data_plot['z'][i,j] = self.func.function(np.array([xx[0][i], yy[j][0]]))
+        return data_plot
+
     def plotter(self):
+        """
+        TODO: docstring
+        """
         plt.plot(self.position[:,0], self.position[:,1], 'o')
         plt.contourf(self.data_plot['x'], self.data_plot['y'], self.data_plot['z'])
         plt.quiver(self.position[:,0], self.position[:,1], self.velocity[:,0], self.velocity[:,1], units='xy', scale_units='xy', scale=1)
@@ -221,8 +229,6 @@ class Swarm():
         plt.ylabel("y")
 
         if self.swarm_options['create_gif']:
-
-
             filename = f'{self.gif_counter}.png'
             self.gif_filenames.append(filename)
     
@@ -233,15 +239,16 @@ class Swarm():
         plt.show()
     
     def create_gif(self):
-
+        """
+        TODO: docstring
+        """
         with imageio.get_writer('PSO.gif', mode='I') as writer:
-
             for filename in self.gif_filenames:
-
                 image = imageio.imread(filename)
                 writer.append_data(image)
 
         print('Gif has been written.')
+        
         # Remove files
         for filename in set(self.gif_filenames):
             os.remove(filename)
