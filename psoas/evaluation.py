@@ -1,5 +1,5 @@
 """
-Implementation of the evaluation framwork for the Particle Swarm Optimizer. 
+Implementation of the evaluation framework for the Particle Swarm Optimizer. 
 """
 
 import numpy as np

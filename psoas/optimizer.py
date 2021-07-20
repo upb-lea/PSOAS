@@ -117,8 +117,9 @@ class Optimizer():
         """
         TODO: docstring
         """
+        self.SurrogateModel.fit_model(self.Swarm.position, self.Swarm.f_values)
         self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values)
-        self.SurrogateModel.fit_model()
+        #print(self.SurrogateModel.positions.shape)
 
     def use_surrogate_prediction(self):
         """
@@ -126,8 +127,12 @@ class Optimizer():
         """
         if self.options['surrogate_options']['prediction_mode'] == 'standard':
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+            print(prediction)
+
             prediction_point = prediction[0][0]
             f_val_at_pred = self.func(prediction_point[None,:])
+
+            print(f_val_at_pred)
 
             self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred)
 
