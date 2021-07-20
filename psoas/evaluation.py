@@ -97,6 +97,8 @@ class EvaluationSingle(Evaluation):
         var = np.var(self.df['func_opt'])
         min = np.min(self.df['func_opt'])
         max = np.max(self.df['func_opt'])
+        median = np.median(self.df['func_opt'])
+        std = np.std(self.df['func_opt'])
 
         diff = self.df['func_opt'] - self.opt_value
 
@@ -104,11 +106,12 @@ class EvaluationSingle(Evaluation):
         var_diff = np.var(diff)
         min_diff = np.min(diff)
         max_diff = np.max(diff)
+        
     
-        stats_dict = {'mean_iters': mean_iters, 'mean_fun_evals': mean_fun_evals,
-                      'mean': mean, 'var': var, 'min': min, 'max': max, 
-                      'mean_diff': mean_diff, 'var_diff': var_diff, 'min_diff': min_diff, 
-                      'max_diff': max_diff}
+        stats_dict = {'min': min,'median': median, 'mean': mean, 'max': max, 'std': std,
+                      'var': var, 'mean_iters': mean_iters, 'mean_fun_evals': mean_fun_evals,
+                      'min_diff': min_diff, 'mean_diff': mean_diff, 'max_diff': max_diff,   
+                      'var_diff': var_diff}
     
         for key in stats_dict.keys():
             stats_dict[key] = np.round(stats_dict[key], 5)
