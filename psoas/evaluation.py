@@ -150,7 +150,7 @@ class EvaluationFunctionSet(Evaluation):
         self.dim = dim
         self.max_iter = max_iter
 
-        keys = ['mean_iters', 'mean_fun_evals', 'mean', 'var', 'min', 'max', 'mean_diff', 'var_diff', 'min_diff', 'max_diff']
+        keys = ['min', 'median', 'mean', 'max', 'std', 'var', 'mean_iters', 'mean_fun_evals', 'min_diff', 'mean_diff', 'max_diff', 'var_diff']
         self.df = pd.DataFrame(columns=keys, index=range(0,28))
 
         self.results = {}
