@@ -128,7 +128,6 @@ class Swarm():
         (doi: 10.1109/CEC.2013.6557848).
         """
         lbest, lbest_position = self.compute_lbest()
-        # gbest, gbest_position = self.compute_gbest()
         
         c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
         omega = 1 / (2*np.log(2))
@@ -186,6 +185,7 @@ class Swarm():
             self._velocity_update_MSPSO2011()
 
         else:
+            
             raise NotImplementedError()
 
     def topology_global(self):
