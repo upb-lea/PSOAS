@@ -20,10 +20,6 @@ def random_hypersphere_draw(r, dim):
     u *= r[:,None]
     return u[:,:dim]
 
-def calc_max_iter(max_f_eval, n_particles):
-    max_iter = np.floor((max_f_eval - n_particles)/n_particles)
-    return max_iter.astype('int')
-
 
 class counting_function():
     def __init__(self, function):
