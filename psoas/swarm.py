@@ -116,7 +116,6 @@ class Swarm():
         (doi: 10.1109/CEC.2013.6557848).
         """
         lbest, lbest_position = self.compute_lbest()
-        # gbest, gbest_position = self.compute_gbest()
         
         c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
        
@@ -144,6 +143,7 @@ class Swarm():
         if self.swarm_options['mode'] == 'SPSO2011':
             self._velocity_update_SPSO2011()
         else:
+            
             raise NotImplementedError()
 
     def topology_global(self):
