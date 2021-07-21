@@ -10,6 +10,7 @@ Pipfile
 .ipynb_checkpoints
 __pycache__/
 report.log
+notebooks/
 
 #Evaluation
 evalset
@@ -17,3 +18,4 @@ exdata
 cec2013single
 ppdata
 coco
+results/
