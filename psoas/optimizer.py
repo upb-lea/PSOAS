@@ -198,6 +198,9 @@ class Optimizer():
                 results['var_pbest_list'].append(np.var(self.Swarm.pbest))
                 results["n_fun_eval_list"].append(self.func.eval_count)
 
+            if self.options['swarm_options']['3d_plot']:
+                self.Swarm.plotter()
+
             if self.options['verbose']:
                 self.print_iteration_information(i, gbest)
 
