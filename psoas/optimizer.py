@@ -57,7 +57,8 @@ class Optimizer():
                                               'use_surrogate': True,
                                               '3d_plot': False,
                                               'interval': 10,
-                                              'prediction_mode': 'standard'}
+                                              'prediction_mode': 'standard',
+                                              'prioritization': 0.2}
                         }
 
         for key, value in kwargs.items():
@@ -78,7 +79,8 @@ class Optimizer():
         self.func = counting_function_cec2013_single(func)
         self.dim = dim
         self.max_iter = max_iter
-        self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'])
+        self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'], 
+                           self.options['surrogate_options'])
 
         if 'surrogate_type' in self.options['surrogate_options'].keys():
             self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, 
@@ -103,6 +105,7 @@ class Optimizer():
             self.Swarm.compute_velocity(self.current_prediction)
         else:
             self.Swarm.compute_velocity(None)
+
         self.enforce_constraints(check_position=False, check_velocity=True)
 
         self.Swarm.position = self.Swarm.position + self.Swarm.velocity
@@ -146,7 +149,9 @@ class Optimizer():
                 self.Swarm.pbest[idx] = f_val_at_pred
                 self.Swarm.pbest_position[idx] = prediction_point
 
-        if self.options['surrogate_options']['prediction_mode'] == 'centre_of_gravity':
+        elif (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
+              self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
+             ):
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
 
             prediction_point = prediction[0][0]
