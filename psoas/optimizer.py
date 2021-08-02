@@ -9,6 +9,7 @@ Typical usage example:
 import numpy as np
 import matplotlib.pyplot as plt
 import pprint
+from numpy.core.numeric import indices
 import tableprint as tp
 from tqdm import tqdm
 
@@ -57,6 +58,7 @@ class Optimizer():
                                               'use_surrogate': True,
                                               '3d_plot': False,
                                               'interval': 10,
+                                              'm': 0,
                                               'prediction_mode': 'standard'}
                         }
 
@@ -145,6 +147,31 @@ class Optimizer():
             if f_val_at_pred < self.Swarm.pbest[idx]:
                 self.Swarm.pbest[idx] = f_val_at_pred
                 self.Swarm.pbest_position[idx] = prediction_point
+
+        if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+            n = self.options['surrogate_options']['m'] + 1
+            position_prediction, std_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+
+
+            prediction_point = position_prediction[0]
+            std = abs(std_prediction[0])
+
+            indices = np.argsort(self.Swarm.pbest)[-n:][::-1]
+
+            self.Swarm.position[indices[0]] = prediction_point
+            self.Swarm.position[indices[1:]] = np.random.normal(prediction_point, std, size=(n-1, self.dim))
+
+            f_val_at_pred = self.func(self.Swarm.position[indices])
+
+            self.SurrogateModel.update_data(self.Swarm.position[indices], f_val_at_pred, do_filtering=False)
+
+            self.Swarm.f_values[indices] = f_val_at_pred
+            self.Swarm.velocity[indices] = np.random.normal(size=(n, self.dim))
+
+            mask = f_val_at_pred < self.Swarm.pbest[indices]
+            
+            self.Swarm.pbest[indices[mask]] = f_val_at_pred[mask]
+            self.Swarm.pbest_position[indices[mask]] = self.Swarm.position[indices[mask]]
 
         if self.options['surrogate_options']['prediction_mode'] == 'centre_of_gravity':
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
