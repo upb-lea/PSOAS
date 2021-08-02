@@ -109,7 +109,7 @@ class Swarm():
         else:
             raise ValueError(f"Expected global, ring or adaptive random for the topology. Got {self.options['topology']}")
 
-    def _velocity_update_SPSO2011(self):
+    def _velocity_update_SPSO2011(self, current_prediction):
         """
         This implementation of the velocity update is based on the Standard Particle Swarm 
         Optimization 2011 (SPSO2011) as presented in the paper ZambranoBigiarini2013 
@@ -126,7 +126,14 @@ class Swarm():
         proj_pbest = self.position + c_1 * U_1 * (self.pbest_position - self.position)
         proj_lbest = self.position + c_2 * U_2 * (lbest_position - self.position) 
 
-        center = (self.position + proj_pbest + proj_lbest) / 3
+        if current_prediction is None:
+            center = (self.position + proj_pbest + proj_lbest) / 3
+        else:
+            c_3 = 0.75
+            U_3 = uniform_distribution(self.n_particles, self.dim)
+            proj_pred = self.position + c_3 * U_3 * (current_prediction - self.position)
+
+            center = (self.position + proj_pbest + proj_lbest + proj_pred) / 4
 
         r = np.linalg.norm(center - self.position, axis=1)
 
@@ -137,12 +144,12 @@ class Swarm():
         omega = 1 / (2*np.log(2))
         self.velocity = omega * self.velocity + sample_points - self.position
 
-    def compute_velocity(self):
+    def compute_velocity(self, current_prediction):
         """
         TODO: docstring
         """
         if self.swarm_options['mode'] == 'SPSO2011':
-            self._velocity_update_SPSO2011()
+            self._velocity_update_SPSO2011(current_prediction)
         else:
             raise NotImplementedError()
 

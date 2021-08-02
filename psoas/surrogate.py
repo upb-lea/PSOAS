@@ -47,27 +47,27 @@ class Surrogate():
 
         self.sm.updateModel(input_positions, input_f_vals[:, None], None, None)
 
-
-    def update_data(self, curr_positions, curr_f_vals, rho=1.5):
+    def update_data(self, curr_positions, curr_f_vals, rho=1.15, do_filtering=False):
         """
         Docstring: TODO
         """
-        # discard any points that hold little information
-        # see Jakubik2021
-        mean, std = self.sm.predict(curr_positions)
-        var = std**2
-        lower_bound = mean - rho * var
-        upper_bound = mean + rho * var
+        if do_filtering:
+            # discard any points that hold little information
+            # see Jakubik2021
+            mean, std = self.sm.predict(curr_positions)
+            var = std**2
+            lower_bound = mean - rho * var
+            upper_bound = mean + rho * var
 
-        lower_bound = np.reshape(lower_bound, (lower_bound.shape[0],))
-        upper_bound = np.reshape(upper_bound, (upper_bound.shape[0],))
+            lower_bound = np.reshape(lower_bound, (lower_bound.shape[0],))
+            upper_bound = np.reshape(upper_bound, (upper_bound.shape[0],))
 
-        lower_bool = np.greater(curr_f_vals, lower_bound)
-        upper_bool = np.less(curr_f_vals, upper_bound)
+            lower_bool = np.greater(curr_f_vals, lower_bound)
+            upper_bool = np.less(curr_f_vals, upper_bound)
 
-        helpful_points = ~np.logical_and(lower_bool, upper_bool)
-        curr_positions = curr_positions[helpful_points]
-        curr_f_vals = curr_f_vals[helpful_points]
+            helpful_points = ~np.logical_and(lower_bool, upper_bool)
+            curr_positions = curr_positions[helpful_points]
+            curr_f_vals = curr_f_vals[helpful_points]
 
         self.positions = np.concatenate((self.positions, curr_positions), axis=0)
         self.f_vals = np.concatenate((self.f_vals, curr_f_vals))
@@ -93,7 +93,7 @@ class Surrogate():
         acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
 
         if self.surrogate_options['surrogate_type'] == 'GP':
-            acquisition = GPyOpt.acquisitions.MPI.AcquisitionMPI(self.sm, space, acquisition_optimizer, jitter=0)
+            acquisition = GPyOpt.acquisitions.AcquisitionEI(self.sm, space, acquisition_optimizer, jitter=0)
         elif self.surrogate_options['surrogate_type'] == 'GP_MCMC':
             acquisition = GPyOpt.acquisitions.AcquisitionEI_MCMC(self.sm, space, acquisition_optimizer)
 

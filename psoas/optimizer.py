@@ -99,7 +99,10 @@ class Optimizer():
         point for each particle is updated, if the function value at the new location is better than
         the previous personal best position.
         """
-        self.Swarm.compute_velocity()
+        if hasattr(self, 'current_prediction'):
+            self.Swarm.compute_velocity(self.current_prediction)
+        else:
+            self.Swarm.compute_velocity(None)
         self.enforce_constraints(check_position=False, check_velocity=True)
 
         self.Swarm.position = self.Swarm.position + self.Swarm.velocity
@@ -118,7 +121,7 @@ class Optimizer():
         TODO: docstring
         """
         self.SurrogateModel.fit_model(self.Swarm.position, self.Swarm.f_values)
-        self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values)
+        self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values, do_filtering=True)
         #print(self.SurrogateModel.positions.shape)
 
     def use_surrogate_prediction(self):
@@ -127,14 +130,11 @@ class Optimizer():
         """
         if self.options['surrogate_options']['prediction_mode'] == 'standard':
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
-            print(prediction)
 
             prediction_point = prediction[0][0]
             f_val_at_pred = self.func(prediction_point[None,:])
 
-            print(f_val_at_pred)
-
-            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred)
+            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred, do_filtering=False)
 
             idx = np.argmax(self.Swarm.pbest)
 
@@ -145,6 +145,15 @@ class Optimizer():
             if f_val_at_pred < self.Swarm.pbest[idx]:
                 self.Swarm.pbest[idx] = f_val_at_pred
                 self.Swarm.pbest_position[idx] = prediction_point
+
+        if self.options['surrogate_options']['prediction_mode'] == 'centre_of_gravity':
+            prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+
+            prediction_point = prediction[0][0]
+            f_val_at_pred = self.func(prediction_point[None,:])
+
+            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred, do_filtering=False)
+            self.current_prediction = prediction_point
 
 
     def optimize(self):
