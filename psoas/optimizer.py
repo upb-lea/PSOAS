@@ -155,14 +155,20 @@ class Optimizer():
             n = self.options['surrogate_options']['m'] + 1
             position_prediction, std_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
 
-
             prediction_point = position_prediction[0]
             std = abs(std_prediction[0])
+
+            #TODO: Smart way to normalize std.
+            # std_lower = 0.01 * self.constr_above[0][0]
+            # std_upper = 0.1 * self.constr_above[0][0]
+            # std = np.clip(std, std_lower, std_upper)
 
             indices = np.argsort(self.Swarm.pbest)[-n:][::-1]
 
             self.Swarm.position[indices[0]] = prediction_point
-            self.Swarm.position[indices[1:]] = np.random.normal(prediction_point, std, size=(n-1, self.dim))
+            self.Swarm.position[indices[1:]] = np.random.normal(prediction_point, 1, size=(n-1, self.dim))
+
+            self.enforce_constraints(check_position=True, check_velocity=False)
 
             f_val_at_pred = self.func(self.Swarm.position[indices])
 
