@@ -27,7 +27,7 @@ class Optimizer():
     algorithm on benchmark-/testfunctions.
     """
 
-    def __init__(self, func, n_particles, dim, constr, max_iter, **kwargs):
+    def __init__(self, func, n_particles, dim, constr, max_iter, max_func_evals=None, **kwargs):
         """Creates and initializes an optimizer class instance.
 
         This function creates all class attributes which are necessary for an optimization process.
@@ -81,6 +81,7 @@ class Optimizer():
         self.func = counting_function_cec2013_single(func)
         self.dim = dim
         self.max_iter = max_iter
+        self.max_func_evals = max_func_evals
         self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'], 
                            self.options['surrogate_options'])
 
@@ -252,6 +253,11 @@ class Optimizer():
                 results['term_flag'] = 2
                 break
 
+            if self.check_max_func_evals():
+                results['iter'] = i+1
+                results['term_flag'] = 0
+                break
+
         if results['iter'] == None:
             results['iter'] = self.max_iter
             results['term_flag'] = 1
@@ -285,6 +291,8 @@ class Optimizer():
         Any particle which left the valid search space is moved back into it. Furthermore
         the velocity which brought the particle out of the valid search space is put to 
         zero.
+
+        TODO: replace with clip
         """
         if check_position:
             bool_below = self.Swarm.position < self.Swarm.constr[:, 0]
@@ -302,6 +310,37 @@ class Optimizer():
             self.Swarm.velocity[bool_below] = self.constr_below[bool_below]
             self.Swarm.velocity[bool_above] = self.constr_above[bool_above]
 
+    def check_max_func_evals(self):
+        """Returns true if the optimization should be terminated due to too many function evaluations.
+        
+        This is always done such that the amount of function evaluations is lower than the given maximum.
+        But it is not ensured that the amount of function evaluations is fully exhausted. If the next 
+        iteration would lead to too many function evaluations, the iteration would not be started and
+        the optimization terminates.
+        """
+        if self.max_func_evals is None:
+            return False
+        
+        surrogate_options = self.options['surrogate_options']
+
+        if surrogate_options['use_surrogate']:
+            if surrogate_options['prediction_mode'] in ['standard', 'center_of_gravity', 'shifting_center']:
+                func_evals_iter = self.Swarm.n_particles + 1
+            
+            elif surrogate_options['prediction_mode'] == 'standard_m':
+                func_evals_iter = self.Swarm.n_particles + surrogate_options['m']
+
+            else:
+                raise ValueError(f"Surrogate prediction mode {surrogate_options['prediction_mode']} unknown.")
+
+        else:
+            func_evals_iter = self.Swarm.n_particles
+
+        if self.func.eval_count + func_evals_iter > self.max_func_evals:
+            return True
+        else:
+            return False
+
     def print_iteration_information(self, idx, gbest):
         if idx == 0:
             print('\n', 'Options:')
@@ -311,7 +350,7 @@ class Optimizer():
             self.headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
             print(tp.header(self.headers, width=20))
 
-        elif idx % self.options['verbose_interval'] == 0:
+        if idx % self.options['verbose_interval'] == 0:
             mean_pbest = np.mean(self.Swarm.pbest)
             var_pbest = np.var(self.Swarm.pbest)
 
