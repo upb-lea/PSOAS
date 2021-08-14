@@ -182,12 +182,12 @@ class Swarm():
         
         self.velocity = omega * self.velocity + sample_points - self.position
 
-    def compute_velocity(self):
+    def compute_velocity(self, current_prediction):
         """
         TODO: docstring
         """
         if self.swarm_options['mode'] == 'SPSO2011':
-            self._velocity_update_SPSO2011()
+            self._velocity_update_SPSO2011(current_prediction)
 
         elif self.swarm_options['mode'] == 'MSPSO2011':
             self._velocity_update_MSPSO2011()
