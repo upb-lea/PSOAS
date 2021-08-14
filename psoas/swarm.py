@@ -18,7 +18,7 @@ class Swarm():
     global optimum and a local optimum which depends on the topology.
     """
 
-    def __init__(self, func, n_particles, dim, constr, swarm_options):
+    def __init__(self, func, n_particles, dim, constr, swarm_options, surrogate_options):
         """Creates and initializes a swarm class instance.
 
         Args:
@@ -31,6 +31,7 @@ class Swarm():
         assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape}!"
 
         self.swarm_options = swarm_options
+        self.surrogate_options = surrogate_options
 
         self.func = func
         self.n_particles = n_particles
@@ -39,12 +40,12 @@ class Swarm():
         
         self._calculate_initial_values()        
 
-        # preparation for contur plot
+        # preparation for contour plot
         if swarm_options['3d_plot'] is True:
             assert dim == 2, f'Got dim {self.dim}. Expect dim 2.'
 
             self.data_plot = {}
-            self.data_plot = self.get_contur(self.data_plot)
+            self.data_plot = self.get_contour(self.data_plot)
             self.gif_counter = 0
             self.gif_filenames = []
 
@@ -109,7 +110,7 @@ class Swarm():
         else:
             raise ValueError(f"Expected global, ring or adaptive random for the topology. Got {self.options['topology']}")
 
-    def _velocity_update_SPSO2011(self):
+    def _velocity_update_SPSO2011(self, current_prediction):
         """
         This implementation of the velocity update is based on the Standard Particle Swarm 
         Optimization 2011 (SPSO2011) as presented in the paper ZambranoBigiarini2013 
@@ -125,7 +126,26 @@ class Swarm():
         proj_pbest = self.position + c_1 * U_1 * (self.pbest_position - self.position)
         proj_lbest = self.position + c_2 * U_2 * (lbest_position - self.position) 
 
-        center = (self.position + proj_pbest + proj_lbest) / 3
+        if (self.surrogate_options['use_surrogate'] and 
+            self.surrogate_options['prediction_mode'] == 'center_of_gravity' and
+            current_prediction is not None
+           ):
+            c_3 = 0.75
+            U_3 = uniform_distribution(self.n_particles, self.dim)
+            proj_pred = self.position + c_3 * U_3 * (current_prediction - self.position)
+
+            center = (self.position + proj_pbest + proj_lbest + proj_pred) / 4
+
+        elif (self.surrogate_options['use_surrogate'] and 
+              self.surrogate_options['prediction_mode'] == 'shifting_center' and 
+              current_prediction is not None
+             ):
+            prio = self.surrogate_options['prioritization']
+            center_standard = (self.position + proj_pbest + proj_lbest) / 3
+            center = center_standard + prio * (current_prediction - center_standard)
+
+        else:
+            center = (self.position + proj_pbest + proj_lbest) / 3           
 
         r = np.linalg.norm(center - self.position, axis=1)
 
@@ -230,7 +250,7 @@ class Swarm():
         best_indices = np.argmin(informed_particles, axis=1)
         return self.pbest[best_indices], self.pbest_position[best_indices]
 
-    def get_contur(self, data_plot):
+    def get_contour(self, data_plot):
         delta = 0.1
         B = np.arange(-100, 100, delta)
         data_plot['x'] = B

@@ -9,6 +9,7 @@ Typical usage example:
 import numpy as np
 import matplotlib.pyplot as plt
 import pprint
+from numpy.core.numeric import indices
 import tableprint as tp
 from tqdm import tqdm
 
@@ -26,7 +27,7 @@ class Optimizer():
     algorithm on benchmark-/testfunctions.
     """
 
-    def __init__(self, func, n_particles, dim, constr, max_iter, **kwargs):
+    def __init__(self, func, n_particles, dim, constr, max_iter, max_func_evals=None, **kwargs):
         """Creates and initializes an optimizer class instance.
 
         This function creates all class attributes which are necessary for an optimization process.
@@ -57,7 +58,9 @@ class Optimizer():
                                               'use_surrogate': True,
                                               '3d_plot': False,
                                               'interval': 10,
-                                              'prediction_mode': 'standard'}
+                                              'm': 0,
+                                              'prediction_mode': 'standard',
+                                              'prioritization': 0.2}
                         }
 
         for key, value in kwargs.items():
@@ -78,7 +81,9 @@ class Optimizer():
         self.func = counting_function_cec2013_single(func)
         self.dim = dim
         self.max_iter = max_iter
-        self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'])
+        self.max_func_evals = max_func_evals
+        self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'], 
+                           self.options['surrogate_options'])
 
         if 'surrogate_type' in self.options['surrogate_options'].keys():
             self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, 
@@ -99,7 +104,11 @@ class Optimizer():
         point for each particle is updated, if the function value at the new location is better than
         the previous personal best position.
         """
-        self.Swarm.compute_velocity()
+        if hasattr(self, 'current_prediction'):
+            self.Swarm.compute_velocity(self.current_prediction)
+        else:
+            self.Swarm.compute_velocity(None)
+
         self.enforce_constraints(check_position=False, check_velocity=True)
 
         self.Swarm.position = self.Swarm.position + self.Swarm.velocity
@@ -117,8 +126,9 @@ class Optimizer():
         """
         TODO: docstring
         """
-        self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values)
-        self.SurrogateModel.fit_model()
+        self.SurrogateModel.fit_model(self.Swarm.position, self.Swarm.f_values)
+        self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values, do_filtering=True)
+        #print(self.SurrogateModel.positions.shape)
 
     def use_surrogate_prediction(self):
         """
@@ -126,10 +136,11 @@ class Optimizer():
         """
         if self.options['surrogate_options']['prediction_mode'] == 'standard':
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+
             prediction_point = prediction[0][0]
             f_val_at_pred = self.func(prediction_point[None,:])
 
-            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred)
+            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred, do_filtering=False)
 
             idx = np.argmax(self.Swarm.pbest)
 
@@ -140,6 +151,48 @@ class Optimizer():
             if f_val_at_pred < self.Swarm.pbest[idx]:
                 self.Swarm.pbest[idx] = f_val_at_pred
                 self.Swarm.pbest_position[idx] = prediction_point
+
+        if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+            n = self.options['surrogate_options']['m'] + 1
+            position_prediction, std_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+
+            prediction_point = position_prediction[0]
+            std = abs(std_prediction[0])
+
+            #TODO: Smart way to normalize std.
+            # std_lower = 0.01 * self.constr_above[0][0]
+            # std_upper = 0.1 * self.constr_above[0][0]
+            # std = np.clip(std, std_lower, std_upper)
+
+            indices = np.argsort(self.Swarm.pbest)[-n:][::-1]
+
+            self.Swarm.position[indices[0]] = prediction_point
+            self.Swarm.position[indices[1:]] = np.random.normal(prediction_point, 1, size=(n-1, self.dim))
+
+            self.enforce_constraints(check_position=True, check_velocity=False)
+
+            f_val_at_pred = self.func(self.Swarm.position[indices])
+
+            self.SurrogateModel.update_data(self.Swarm.position[indices], f_val_at_pred, do_filtering=False)
+
+            self.Swarm.f_values[indices] = f_val_at_pred
+            self.Swarm.velocity[indices] = np.random.normal(size=(n, self.dim))
+
+            mask = f_val_at_pred < self.Swarm.pbest[indices]
+            
+            self.Swarm.pbest[indices[mask]] = f_val_at_pred[mask]
+            self.Swarm.pbest_position[indices[mask]] = self.Swarm.position[indices[mask]]
+
+        elif (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
+              self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
+             ):
+            prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+
+            prediction_point = prediction[0][0]
+            f_val_at_pred = self.func(prediction_point[None,:])
+
+            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred, do_filtering=False)
+            self.current_prediction = prediction_point
 
 
     def optimize(self):
@@ -209,6 +262,11 @@ class Optimizer():
                 results['term_flag'] = 2
                 break
 
+            if self.check_max_func_evals():
+                results['iter'] = i+1
+                results['term_flag'] = 0
+                break
+
         if results['iter'] == None:
             results['iter'] = self.max_iter
             results['term_flag'] = 1
@@ -242,6 +300,8 @@ class Optimizer():
         Any particle which left the valid search space is moved back into it. Furthermore
         the velocity which brought the particle out of the valid search space is put to 
         zero.
+
+        TODO: replace with clip
         """
         if check_position:
             bool_below = self.Swarm.position < self.Swarm.constr[:, 0]
@@ -259,6 +319,37 @@ class Optimizer():
             self.Swarm.velocity[bool_below] = self.constr_below[bool_below]
             self.Swarm.velocity[bool_above] = self.constr_above[bool_above]
 
+    def check_max_func_evals(self):
+        """Returns true if the optimization should be terminated due to too many function evaluations.
+        
+        This is always done such that the amount of function evaluations is lower than the given maximum.
+        But it is not ensured that the amount of function evaluations is fully exhausted. If the next 
+        iteration would lead to too many function evaluations, the iteration would not be started and
+        the optimization terminates.
+        """
+        if self.max_func_evals is None:
+            return False
+        
+        surrogate_options = self.options['surrogate_options']
+
+        if surrogate_options['use_surrogate']:
+            if surrogate_options['prediction_mode'] in ['standard', 'center_of_gravity', 'shifting_center']:
+                func_evals_iter = self.Swarm.n_particles + 1
+            
+            elif surrogate_options['prediction_mode'] == 'standard_m':
+                func_evals_iter = self.Swarm.n_particles + surrogate_options['m']
+
+            else:
+                raise ValueError(f"Surrogate prediction mode {surrogate_options['prediction_mode']} unknown.")
+
+        else:
+            func_evals_iter = self.Swarm.n_particles
+
+        if self.func.eval_count + func_evals_iter > self.max_func_evals:
+            return True
+        else:
+            return False
+
     def print_iteration_information(self, idx, gbest):
         if idx == 0:
             print('\n', 'Options:')
@@ -268,7 +359,7 @@ class Optimizer():
             self.headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
             print(tp.header(self.headers, width=20))
 
-        elif idx % self.options['verbose_interval'] == 0:
+        if idx % self.options['verbose_interval'] == 0:
             mean_pbest = np.mean(self.Swarm.pbest)
             var_pbest = np.var(self.Swarm.pbest)
 

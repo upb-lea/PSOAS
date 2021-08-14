@@ -1,5 +1,5 @@
 """
-Implementation of the evaluation framwork for the Particle Swarm Optimizer. 
+Implementation of the evaluation framework for the Particle Swarm Optimizer. 
 """
 
 import numpy as np
@@ -24,8 +24,8 @@ class Evaluation():
             data_dict[key] = np.zeros(height)
         self.df = pd.DataFrame.from_dict(data_dict)
 
-    def _optimize_function(self, func, n_particles, dim, constr, max_iter, options=None):
-        opt = Optimizer(func, n_particles, dim, constr, max_iter, **options)
+    def _optimize_function(self, func, n_particles, dim, constr, max_iter, max_func_evals, options=None):
+        opt = Optimizer(func, n_particles, dim, constr, max_iter, max_func_evals, **options)
         return opt.optimize()
 
     def print_tables(self):
@@ -68,7 +68,7 @@ class EvaluationSingle(Evaluation):
         if opt_value is not None:
             self.opt_value = opt_value
 
-    def evaluate_function(self, n_particles, dim, max_iter, options, n_runs):
+    def evaluate_function(self, n_particles, dim, max_iter, max_func_evals, options, n_runs):
         keys = ['n_iter', 'n_fun_evals', 'term_flag', 'func_opt', 'mean_pbest', 'var_pbest']
         if hasattr(self, 'ground_truth'):
             keys.append('dist_gt')
@@ -77,7 +77,7 @@ class EvaluationSingle(Evaluation):
 
         self._create_dataframe(keys, n_runs)
         for i in range(n_runs):
-            res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, options)
+            res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, max_func_evals, options)
             self.df.loc[i, 'n_iter'] = res['iter']
             self.df.loc[i, 'n_fun_evals'] = res['n_fun_evals']
             self.df.loc[i, 'term_flag'] = res['term_flag']
@@ -145,10 +145,11 @@ class EvaluationFunctionSet(Evaluation):
     Multiple functions, (multiple? runs)
     """
 
-    def evaluate_functions(self, bench, n_particles, dim, max_iter, options, n_runs):
+    def evaluate_functions(self, bench, n_particles, dim, max_iter, max_func_evals, options, n_runs):
         self.n_particles = n_particles
         self.dim = dim
         self.max_iter = max_iter
+        self.max_func_evals = max_func_evals
 
         keys = ['min', 'median', 'mean', 'max', 'std', 'var', 'mean_iters', 'mean_fun_evals', 'min_diff', 'mean_diff', 'max_diff', 'var_diff']
         self.df = pd.DataFrame(columns=keys, index=range(0,28))
@@ -161,7 +162,7 @@ class EvaluationFunctionSet(Evaluation):
             constraints = np.ones((dim, 2))*np.array([info['lower'], info['upper']])
 
             eval_single = EvaluationSingle(func, constraints, opt_value=info['best'])
-            eval_single.evaluate_function(self.n_particles, self.dim, self.max_iter, options, n_runs)
+            eval_single.evaluate_function(self.n_particles, self.dim, self.max_iter, self.max_func_evals, options, n_runs)
             self.results[str(idx)] = eval_single.df.to_dict()
 
             func_stat_data = eval_single.get_statistical_information()
