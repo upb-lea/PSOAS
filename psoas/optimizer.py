@@ -173,7 +173,7 @@ class Optimizer():
 
             f_val_at_pred = self.func(self.Swarm.position[indices])
 
-            self.SurrogateModel.update_data(self.Swarm.position[indices], f_val_at_pred, do_filtering=False)
+            self.SurrogateModel.update_data(self.Swarm.position[indices], f_val_at_pred, do_filtering=True)
 
             self.Swarm.f_values[indices] = f_val_at_pred
             self.Swarm.velocity[indices] = np.random.normal(size=(n, self.dim))
