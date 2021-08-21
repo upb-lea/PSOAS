@@ -94,7 +94,6 @@ class Optimizer():
         self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
         self.velocity_reset = np.zeros((n_particles, dim))
 
-
     def update_swarm(self):
         """Updates the Swarm instance.
 
@@ -192,7 +191,6 @@ class Optimizer():
             prediction_point = prediction[0][0]
             self.current_prediction = prediction_point
 
-
     def optimize(self):
         """Main optimization routine.
 
@@ -288,11 +286,6 @@ class Optimizer():
 
         return results
 
-
-    def stalling(self):
-        raise NotImplementedError
-
-
     def enforce_constraints(self, check_position, check_velocity):
         """Enforces the constraints of the valid search space.
 
@@ -332,7 +325,10 @@ class Optimizer():
         surrogate_options = self.options['surrogate_options']
 
         if surrogate_options['use_surrogate']:
-            if surrogate_options['prediction_mode'] in ['standard', 'center_of_gravity', 'shifting_center']:
+            if surrogate_options['prediction_mode'] in ['center_of_gravity', 'shifting_center']:
+                func_evals_iter = self.Swarm.n_particles
+
+            elif surrogate_options['prediction_mode'] == 'standard':
                 func_evals_iter = self.Swarm.n_particles + 1
             
             elif surrogate_options['prediction_mode'] == 'standard_m':
