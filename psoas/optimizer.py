@@ -110,7 +110,20 @@ class Optimizer():
 
         self.enforce_constraints(check_position=False, check_velocity=True)
 
+        # ensures that the points predicted by the surrogate do not move
+        if self.options['surrogate_options']['prediction_mode'] == 'standard':
+            self.Swarm.velocity[self.worst_idx] = 0
+        elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+            self.Swarm.velocity[self.worst_indices] = 0
+
         self.Swarm.position = self.Swarm.position + self.Swarm.velocity
+
+        # reinitializes the velocity for the predicted points
+        if self.options['surrogate_options']['prediction_mode'] == 'standard':
+            self.Swarm.velocity[self.worst_idx] = normal_distribution(1, self.dim)
+        elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+            n = self.options['surrogate_options']['m'] + 1
+            self.Swarm.velocity[self.worst_indices] = np.random.normal(size=(n, self.dim))
 
         self.enforce_constraints(check_position=True, check_velocity=False)
 
@@ -136,34 +149,16 @@ class Optimizer():
         """
         if self.options['surrogate_options']['prediction_mode'] == 'standard':
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
-
             prediction_point = prediction[0][0]
-            f_val_at_pred = self.func(prediction_point[None,:])
 
-            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred, do_filtering=False)
-
-            idx = np.argmax(self.Swarm.pbest)
-
-            self.Swarm.position[idx] = prediction_point
-            self.Swarm.f_values[idx] = f_val_at_pred
-            self.Swarm.velocity[idx] = normal_distribution(1, self.dim)
-
-            if f_val_at_pred < self.Swarm.pbest[idx]:
-                self.Swarm.pbest[idx] = f_val_at_pred
-                self.Swarm.pbest_position[idx] = prediction_point
+            self.worst_idx = np.argmax(self.Swarm.pbest)
+            self.Swarm.position[self.worst_idx] = prediction_point
 
         if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
             n = self.options['surrogate_options']['m'] + 1
             position_prediction, std_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
 
             prediction_point = position_prediction[0]
-            std = abs(std_prediction[0])
-
-            #TODO: Smart way to normalize std.
-            # std_lower = 0.01 * self.constr_above[0][0]
-            # std_upper = 0.1 * self.constr_above[0][0]
-            # std = np.clip(std, std_lower, std_upper)
-
             indices = np.argsort(self.Swarm.pbest)[-n:][::-1]
 
             self.Swarm.position[indices[0]] = prediction_point
@@ -171,17 +166,7 @@ class Optimizer():
 
             self.enforce_constraints(check_position=True, check_velocity=False)
 
-            f_val_at_pred = self.func(self.Swarm.position[indices])
-
-            self.SurrogateModel.update_data(self.Swarm.position[indices], f_val_at_pred, do_filtering=True)
-
-            self.Swarm.f_values[indices] = f_val_at_pred
-            self.Swarm.velocity[indices] = np.random.normal(size=(n, self.dim))
-
-            mask = f_val_at_pred < self.Swarm.pbest[indices]
-            
-            self.Swarm.pbest[indices[mask]] = f_val_at_pred[mask]
-            self.Swarm.pbest_position[indices[mask]] = self.Swarm.position[indices[mask]]
+            self.worst_indices = indices
 
         elif (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
               self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
@@ -223,10 +208,10 @@ class Optimizer():
                 if i > 0:
                     self.update_surrogate()
 
-                self.use_surrogate_prediction()
-
                 if self.options['surrogate_options']['3d_plot']:
                     self.SurrogateModel.plotter_3d()
+
+                self.use_surrogate_prediction()
 
             self.update_swarm()
 
@@ -321,24 +306,8 @@ class Optimizer():
         """
         if self.max_func_evals is None:
             return False
-        
-        surrogate_options = self.options['surrogate_options']
-
-        if surrogate_options['use_surrogate']:
-            if surrogate_options['prediction_mode'] in ['center_of_gravity', 'shifting_center']:
-                func_evals_iter = self.Swarm.n_particles
-
-            elif surrogate_options['prediction_mode'] == 'standard':
-                func_evals_iter = self.Swarm.n_particles + 1
-            
-            elif surrogate_options['prediction_mode'] == 'standard_m':
-                func_evals_iter = self.Swarm.n_particles + surrogate_options['m']
-
-            else:
-                raise ValueError(f"Surrogate prediction mode {surrogate_options['prediction_mode']} unknown.")
-
-        else:
-            func_evals_iter = self.Swarm.n_particles
+  
+        func_evals_iter = self.Swarm.n_particles
 
         if self.func.eval_count + func_evals_iter > self.max_func_evals:
             return True
