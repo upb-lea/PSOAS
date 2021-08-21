@@ -85,7 +85,7 @@ class Optimizer():
         self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'], 
                            self.options['surrogate_options'])
 
-        if 'surrogate_type' in self.options['surrogate_options'].keys():
+        if self.options['surrogate_options']['use_surrogate']:
             self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, 
                                             self.options["surrogate_options"])
 
@@ -126,9 +126,10 @@ class Optimizer():
         """
         TODO: docstring
         """
+        mean, std = self.SurrogateModel.sm.predict(self.Swarm.position)
+
         self.SurrogateModel.fit_model(self.Swarm.position, self.Swarm.f_values)
-        self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values, do_filtering=True)
-        #print(self.SurrogateModel.positions.shape)
+        self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values, True, mean, std)
 
     def use_surrogate_prediction(self):
         """
@@ -189,9 +190,6 @@ class Optimizer():
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
 
             prediction_point = prediction[0][0]
-            f_val_at_pred = self.func(prediction_point[None,:])
-
-            self.SurrogateModel.update_data(prediction_point[None,:], f_val_at_pred, do_filtering=False)
             self.current_prediction = prediction_point
 
 
@@ -220,18 +218,19 @@ class Optimizer():
             prior_pbest = self.Swarm.pbest.copy()
             prior_gbest, _  = self.Swarm.compute_gbest()
 
-            self.update_swarm()
-
             if (self.options['surrogate_options']['use_surrogate']
                 and i % self.options['surrogate_options']['interval'] == 0):
 
                 assert hasattr(self, 'SurrogateModel')
-                self.update_surrogate()
+                if i > 0:
+                    self.update_surrogate()
 
                 self.use_surrogate_prediction()
 
                 if self.options['surrogate_options']['3d_plot']:
                     self.SurrogateModel.plotter_3d()
+
+            self.update_swarm()
 
             gbest, gbest_position = self.Swarm.compute_gbest()
             self.Swarm.no_change_in_gbest = (prior_gbest - gbest == 0)

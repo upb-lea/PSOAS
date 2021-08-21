@@ -34,6 +34,7 @@ class Surrogate():
 
         self.positions = init_position.copy()
         self.f_vals = init_f_vals.copy()
+        self.sm.updateModel(init_position, init_f_vals[:, None], None, None)
 
         self.dim = init_position.shape[1]
         self.n_particles = init_position.shape[0]
@@ -47,25 +48,16 @@ class Surrogate():
 
         self.sm.updateModel(input_positions, input_f_vals[:, None], None, None)
 
-    def update_data(self, curr_positions, curr_f_vals, rho=1.15, do_filtering=False):
+    def update_data(self, curr_positions, curr_f_vals, do_filtering, mean=0, std=1, rho=1.15):
         """
         Docstring: TODO
         """
         if do_filtering:
-            # discard any points that hold little information
-            # see Jakubik2021
-            mean, std = self.sm.predict(curr_positions)
             var = std**2
-            lower_bound = mean - rho * var
-            upper_bound = mean + rho * var
+            helpful_points = var > np.ones_like(var) * self.dim**2
 
-            lower_bound = np.reshape(lower_bound, (lower_bound.shape[0],))
-            upper_bound = np.reshape(upper_bound, (upper_bound.shape[0],))
+            helpful_points = np.squeeze(helpful_points)
 
-            lower_bool = np.greater(curr_f_vals, lower_bound)
-            upper_bool = np.less(curr_f_vals, upper_bound)
-
-            helpful_points = ~np.logical_and(lower_bool, upper_bool)
             curr_positions = curr_positions[helpful_points]
             curr_f_vals = curr_f_vals[helpful_points]
 
@@ -113,13 +105,17 @@ class Surrogate():
         y = y.flatten()
         flat_grid = np.array([x, y]).T
 
-        predict_val, _ = self.predict(flat_grid)
+        predict_mean, predict_var = self.predict(flat_grid)
 
-        predict_val_reshaped = np.reshape(predict_val, (num, num))
+        predict_mean_reshaped = np.reshape(predict_mean, (num, num))
+        predict_var_reshaped = np.reshape(predict_var, (num, num))
 
         print(80 * "*")
 
-        fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_val_reshaped)])
+        fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_mean_reshaped)])
         fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_vals, mode='markers'))
+        fig.show()
+
+        fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_var_reshaped)])
         fig.show()
         print(80 * "*")

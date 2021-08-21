@@ -68,7 +68,7 @@ class EvaluationSingle(Evaluation):
         if opt_value is not None:
             self.opt_value = opt_value
 
-    def evaluate_function(self, n_particles, dim, max_iter, max_func_evals, options, n_runs):
+    def evaluate_function(self, n_particles, dim, max_iter, max_func_evals, options, n_runs, disable_tqdm=False):
         keys = ['n_iter', 'n_fun_evals', 'term_flag', 'func_opt', 'mean_pbest', 'var_pbest']
         if hasattr(self, 'ground_truth'):
             keys.append('dist_gt')
@@ -76,7 +76,7 @@ class EvaluationSingle(Evaluation):
             keys.insert(3, 'diff_opt_value')
 
         self._create_dataframe(keys, n_runs)
-        for i in range(n_runs):
+        for i in tqdm(range(n_runs), disable=disable_tqdm):
             res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, max_func_evals, options)
             self.df.loc[i, 'n_iter'] = res['iter']
             self.df.loc[i, 'n_fun_evals'] = res['n_fun_evals']
@@ -162,7 +162,8 @@ class EvaluationFunctionSet(Evaluation):
             constraints = np.ones((dim, 2))*np.array([info['lower'], info['upper']])
 
             eval_single = EvaluationSingle(func, constraints, opt_value=info['best'])
-            eval_single.evaluate_function(self.n_particles, self.dim, self.max_iter, self.max_func_evals, options, n_runs)
+            eval_single.evaluate_function(self.n_particles, self.dim, self.max_iter, self.max_func_evals, options, 
+                                          n_runs, disable_tqdm=True)
             self.results[str(idx)] = eval_single.df.to_dict()
 
             func_stat_data = eval_single.get_statistical_information()
