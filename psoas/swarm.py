@@ -115,6 +115,8 @@ class Swarm():
         This implementation of the velocity update is based on the Standard Particle Swarm 
         Optimization 2011 (SPSO2011) as presented in the paper ZambranoBigiarini2013 
         (doi: 10.1109/CEC.2013.6557848).
+        Args:
+            current_prediction: Predicated optimum of the surroagte with shape self.dim
         """
         lbest, lbest_position = self.compute_lbest()
         
@@ -198,7 +200,7 @@ class Swarm():
 
     def topology_global(self):
         """
-        TODO: docstring
+        Implements a global exchange of the personal bests between the particles.
         """
         gbest, gbest_position = self.compute_gbest()
         ones = np.ones(self.n_particles)
@@ -206,7 +208,7 @@ class Swarm():
 
     def topology_ring(self):
         """
-        TODO: docstring
+        Implements a exchange of personal bests according to a ringtopology.
         """
         neighbors = np.zeros([self.n_particles, 3])
         neighbors[0, 0] = self.pbest[-1]
@@ -229,7 +231,7 @@ class Swarm():
 
     def topology_adaptive_random(self):
         """
-        TODO: docstring
+        Implements a exchange of personal bests in a random fashion.
         """
         n_neighbors = 3
 
@@ -251,6 +253,15 @@ class Swarm():
         return self.pbest[best_indices], self.pbest_position[best_indices]
 
     def get_contour(self, data_plot):
+        """
+        Generates data for plotting the current function.
+
+        Args:
+            data_plot: Dict to store the data necessary for plotting
+        
+        Returns:
+            Returns the input dict with three keys: x, y and z
+        """
         delta = 0.1
         B = np.arange(-100, 100, delta)
         data_plot['x'] = B
@@ -266,7 +277,7 @@ class Swarm():
 
     def plotter(self):
         """
-        TODO: docstring
+        Plotting the current function.
         """
         plt.plot(self.position[:,0], self.position[:,1], 'o')
         plt.contourf(self.data_plot['x'], self.data_plot['y'], self.data_plot['z'])
@@ -290,7 +301,7 @@ class Swarm():
     
     def create_gif(self):
         """
-        TODO: docstring
+        Create a gif of the particles moving through the cost landscape.
         """
         with imageio.get_writer('PSO.gif', mode='I') as writer:
             for filename in self.gif_filenames:

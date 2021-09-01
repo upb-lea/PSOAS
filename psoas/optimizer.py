@@ -136,7 +136,9 @@ class Optimizer():
 
     def update_surrogate(self):
         """
-        TODO: docstring
+        This function handles the update of the surrogate by first predicting a point,
+        then creating a new model based on the surrogate's data points and the PSO's
+        current data points, and then updating the data.
         """
         mean, std = self.SurrogateModel.sm.predict(self.Swarm.position)
 
@@ -145,7 +147,7 @@ class Optimizer():
 
     def use_surrogate_prediction(self):
         """
-        TODO: docstring
+        This function handles the different predication methods.
         """
         if self.options['surrogate_options']['prediction_mode'] == 'standard':
             prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
