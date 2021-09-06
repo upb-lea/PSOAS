@@ -63,10 +63,10 @@ class Swarm():
         Returns:
             An array with the function evaluation for each particle with shape (self.n_particles,)
         """
-        assert x.shape == (self.n_particles, self.dim)
+        # assert x.shape == (self.n_particles, self.dim)
 
         res = self.func(x)
-        assert res.shape == (self.n_particles,)
+        # assert res.shape == (self.n_particles,)
 
         return res
 
@@ -82,8 +82,8 @@ class Swarm():
 
         self.velocity = (lhs_sampling(self.n_particles) - self.position)/2
 
-        self.pbest_position = self.position
-        self.pbest = self.f_values
+        self.pbest_position = self.position.copy()
+        self.pbest = self.f_values.copy()
 
     def compute_gbest(self):
         """Returns the global optimum found by any of the particles."""

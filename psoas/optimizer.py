@@ -122,15 +122,19 @@ class Optimizer():
         if self.options['surrogate_options']['prediction_mode'] == 'standard':
             self.Swarm.velocity[self.worst_idx] = normal_distribution(1, self.dim)
         elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-            n = self.options['surrogate_options']['m'] + 1
-            self.Swarm.velocity[self.worst_indices] = np.random.normal(size=(n, self.dim))
+            m = self.options['surrogate_options']['m']
+            self.Swarm.velocity[self.worst_indices] = np.random.normal(size=(m, self.dim))
 
         self.enforce_constraints(check_position=True, check_velocity=False)
 
         # update pbest
-        self.Swarm.f_values = self.Swarm.evaluate_function(self.Swarm.position)
+        if self.options['surrogate_options']['prediction_mode'] == 'standard':
+            self.Swarm.f_values = self.Swarm.evaluate_function(self.Swarm.position)
+        elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+            self.Swarm.f_values[self.other_indices] = self.Swarm.evaluate_function(self.Swarm.position[self.other_indices])
 
         bool_decider = self.Swarm.pbest > self.Swarm.f_values
+
         self.Swarm.pbest[bool_decider] = self.Swarm.f_values[bool_decider]
         self.Swarm.pbest_position[bool_decider, :] = self.Swarm.position[bool_decider, :]
 
@@ -157,18 +161,25 @@ class Optimizer():
             self.Swarm.position[self.worst_idx] = prediction_point
 
         if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-            n = self.options['surrogate_options']['m'] + 1
-            position_prediction, std_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+            m = self.options['surrogate_options']['m']
+            
+            worst_indices = np.argsort(self.Swarm.pbest)[-m:][::-1]
+            other_indices = np.argsort(self.Swarm.pbest)[:-m][::-1]
 
-            prediction_point = position_prediction[0]
-            indices = np.argsort(self.Swarm.pbest)[-n:][::-1]
+            self.other_indices = other_indices
+            self.worst_indices = worst_indices
 
-            self.Swarm.position[indices[0]] = prediction_point
-            self.Swarm.position[indices[1:]] = np.random.normal(prediction_point, 1, size=(n-1, self.dim))
+            for i in range(m):
+
+                position_prediction, std_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+                prediction_point = position_prediction[0]
+
+                self.Swarm.position[worst_indices[i]] = prediction_point
+                self.Swarm.f_values[worst_indices[i]] = self.Swarm.func(prediction_point[None,:])
+
+                self.update_surrogate()
 
             self.enforce_constraints(check_position=True, check_velocity=False)
-
-            self.worst_indices = indices
 
         elif (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
               self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
