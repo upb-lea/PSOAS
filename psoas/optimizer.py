@@ -110,20 +110,22 @@ class Optimizer():
 
         self.enforce_constraints(check_position=False, check_velocity=True)
 
-        # ensures that the points predicted by the surrogate do not move
-        if self.options['surrogate_options']['prediction_mode'] == 'standard':
-            self.Swarm.velocity[self.worst_idx] = 0
-        elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-            self.Swarm.velocity[self.worst_indices] = 0
+        if self.options['surrogate_options']['use_surrogate']:
+            # ensures that the points predicted by the surrogate do not move
+            if self.options['surrogate_options']['prediction_mode'] == 'standard':
+                self.Swarm.velocity[self.worst_idx] = 0
+            elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+                self.Swarm.velocity[self.worst_indices] = 0
 
         self.Swarm.position = self.Swarm.position + self.Swarm.velocity
 
-        # reinitializes the velocity for the predicted points
-        if self.options['surrogate_options']['prediction_mode'] == 'standard':
-            self.Swarm.velocity[self.worst_idx] = normal_distribution(1, self.dim)
-        elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-            n = self.options['surrogate_options']['m'] + 1
-            self.Swarm.velocity[self.worst_indices] = np.random.normal(size=(n, self.dim))
+        if self.options['surrogate_options']['use_surrogate']:
+            # reinitializes the velocity for the predicted points
+            if self.options['surrogate_options']['prediction_mode'] == 'standard':
+                self.Swarm.velocity[self.worst_idx] = normal_distribution(1, self.dim)
+            elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+                n = self.options['surrogate_options']['m'] + 1
+                self.Swarm.velocity[self.worst_indices] = np.random.normal(size=(n, self.dim))
 
         self.enforce_constraints(check_position=True, check_velocity=False)
 
