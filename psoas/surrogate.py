@@ -31,7 +31,7 @@ class Surrogate():
         """
         self.surrogate_options = surrogate_options
         if type(self.surrogate_options['surrogate_type']) == str:
-            if self.surrogate_options['surrogate_type'] == 'GP':
+            if self.surrogate_options['surrogate_type'] == 'GP' or self.surrogate_options['surrogate_type'] == 'GP_MPI':
                 self.sm = GPModel(exact_feval = True, verbose=False)
             elif self.surrogate_options['surrogate_type'] == 'GP_MCMC':
                 self.sm = GPModel_MCMC(exact_feval = True, verbose=False)
@@ -58,6 +58,7 @@ class Surrogate():
             curr_f_vals: The function values of the current swarm particles with shape (n,)
         """
         input_positions = np.concatenate((self.positions, curr_positions), axis=0)
+        
         input_f_vals = np.concatenate((self.f_vals, curr_f_vals))
 
         self.sm.updateModel(input_positions, input_f_vals[:, None], None, None)
@@ -118,6 +119,8 @@ class Surrogate():
 
         if self.surrogate_options['surrogate_type'] == 'GP':
             acquisition = GPyOpt.acquisitions.AcquisitionEI(self.sm, space, acquisition_optimizer, jitter=0)
+        elif self.surrogate_options['surrogate_type'] == 'GP_MPI':
+            acquisition = GPyOpt.acquisitions.AcquisitionMPI(self.sm, space, acquisition_optimizer, jitter=0)
         elif self.surrogate_options['surrogate_type'] == 'GP_MCMC':
             acquisition = GPyOpt.acquisitions.AcquisitionEI_MCMC(self.sm, space, acquisition_optimizer)
 
