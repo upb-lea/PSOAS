@@ -8,6 +8,7 @@ from scipy.stats import norm
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
+from psoas.operations import DataBuffer
 
 import GPyOpt
 from GPyOpt.models.gpmodel import GPModel, GPModel_MCMC
@@ -40,12 +41,18 @@ class Surrogate():
         else:
             raise ValueError(f"Expected string as parameter. Got a {type(self.surrogate_options['surrogate_type'])} type.")
 
-        self.positions = init_position.copy()
-        self.f_vals = init_f_vals.copy()
-        self.sm.updateModel(init_position, init_f_vals[:, None], None, None)
-
         self.dim = init_position.shape[1]
         self.n_particles = init_position.shape[0]
+
+        self.positions = init_position.copy()
+        self.f_vals = init_f_vals.copy()
+
+        if self.surrogate_options['use_buffer']:
+            self.surrogate_memory = DataBuffer(self.dim, self.n_particles, self.surrogate_options['n_slots'])
+            self.surrogate_memory.store(init_position, init_f_vals[:, None])
+
+        self.sm.updateModel(init_position, init_f_vals[:, None], None, None)
+
 
     def fit_model(self, curr_positions, curr_f_vals):
         """
@@ -91,6 +98,22 @@ class Surrogate():
 
         self.positions, idx = np.unique(self.positions, return_index=True, axis=0)
         self.f_vals = self.f_vals[idx]
+    
+    def fit_model_buffer(self):
+        """
+        TODO:Docstring
+        """
+        input_positions, input_f_vals = self.surrogate_memory.fetch()
+        input_positions, idx = np.unique(input_positions, return_index=True, axis=0)
+        input_f_vals = input_f_vals[idx]
+
+        self.sm.updateModel(input_positions, input_f_vals, None, None)
+
+    def update_data_buffer(self, curr_positions, curr_f_vals):
+        """
+        TODO: Docstring
+        """
+        self.surrogate_memory.store(curr_positions, curr_f_vals[:, None])
 
     def predict(self, point):
         """
@@ -124,7 +147,7 @@ class Surrogate():
         if self.surrogate_options['surrogate_type'] == 'GP':
             acquisition = GPyOpt.acquisitions.AcquisitionEI(self.sm, space, acquisition_optimizer, jitter=0)
         elif self.surrogate_options['surrogate_type'] == 'GP_MPI':
-            acquisition = GPyOpt.acquisitions.AcquisitionMPI(self.sm, space, acquisition_optimizer, jitter=0)
+            acquisition = GPyOpt.acquisitions.AcquisitionMPI(self.sm, space, acquisition_optimizer, jitter=0.01)
         elif self.surrogate_options['surrogate_type'] == 'GP_MCMC':
             acquisition = GPyOpt.acquisitions.AcquisitionEI_MCMC(self.sm, space, acquisition_optimizer)
 

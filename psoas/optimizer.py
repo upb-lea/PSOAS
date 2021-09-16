@@ -56,6 +56,8 @@ class Optimizer():
                                           'create_gif': False}, 
                         'surrogate_options': {'surrogate_type': 'GP',
                                               'use_surrogate': True,
+                                              'use_buffer': True,
+                                              'n_slots': 4,
                                               '3d_plot': False,
                                               'interval': 10,
                                               'm': 0,
@@ -146,10 +148,14 @@ class Optimizer():
         then creating a new model based on the surrogate's data points and the PSO's
         current data points, and then updating the data.
         """
-        mean, std = self.SurrogateModel.sm.predict(positions)
+        if self.options['surrogate_options']['use_buffer']:
+            self.SurrogateModel.update_data_buffer(positions, f_values)
+            self.SurrogateModel.fit_model_buffer()
+        else:
+            mean, std = self.SurrogateModel.sm.predict(positions)
 
-        self.SurrogateModel.fit_model(positions, f_values)
-        self.SurrogateModel.update_data(positions, f_values, True, mean, std)
+            self.SurrogateModel.fit_model(positions, f_values)
+            self.SurrogateModel.update_data(positions, f_values, True, mean, std)
 
     def use_surrogate_prediction(self):
         """
@@ -171,16 +177,33 @@ class Optimizer():
             self.other_indices = other_indices
             self.worst_indices = worst_indices
 
+            m_prediction_points = []
+            m_prediction_values = []
+
             for i in range(m):
 
                 position_prediction, std_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
                 prediction_point = position_prediction[0]
 
-                self.Swarm.position[worst_indices[i]] = prediction_point
-                self.Swarm.f_values[worst_indices[i]] = self.Swarm.func(prediction_point[None,:])
+                f_val = self.Swarm.func(prediction_point[None,:])
 
-                self.update_surrogate(self.Swarm.position[worst_indices[i]][None, :], 
-                                      np.atleast_1d(self.Swarm.f_values[worst_indices[i]]))
+                m_prediction_points.append(prediction_point)
+                m_prediction_values.append(f_val)
+
+                self.Swarm.position[worst_indices[i]] = prediction_point
+                self.Swarm.f_values[worst_indices[i]] = f_val
+                
+                if self.options['surrogate_options']['use_buffer']:
+                    input_positions, input_f_vals = self.SurrogateModel.surrogate_memory.fetch()
+
+                    tmp_positions = np.vstack((input_positions, m_prediction_points))
+                    tmp_f_vals = np.vstack((input_f_vals, m_prediction_values))
+
+                    self.SurrogateModel.sm.updateModel(tmp_positions,tmp_f_vals, None, None)
+
+                else:
+                    self.update_surrogate(self.Swarm.position[worst_indices[i]][None, :], 
+                                          np.atleast_1d(self.Swarm.f_values[worst_indices[i]]))
 
             self.enforce_constraints(check_position=True, check_velocity=False)
 

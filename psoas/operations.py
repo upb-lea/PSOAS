@@ -43,3 +43,32 @@ class counting_function_cec2013_single(counting_function):
         for idx in range(length):
             res[idx] = self.function(x[idx, :])
         return res
+
+
+class DataBuffer:
+    
+    def __init__(self, dim, n_particles, n_slots=4):
+
+        self.position_buffer = np.zeros((n_slots * n_particles, dim), dtype=np.float32)
+        self.f_val_buffer = np.zeros((n_slots * n_particles, 1), dtype=np.float32)
+        self.ptr = 0
+        self.size = 0
+        self.max_size = n_slots
+        self.n_particles = n_particles
+    
+    def store(self, positions, f_vals):
+
+        start = self.ptr * self.n_particles
+        end = (self.ptr+1) * self.n_particles
+
+        self.position_buffer[start:end] = positions.copy()
+        self.f_val_buffer[start:end] = f_vals.copy()
+
+        self.ptr = (self.ptr + 1) % self.max_size
+        self.size = min(self.size + 1, self.max_size)
+    
+    def fetch(self):
+
+        positions = self.position_buffer[:self.size*self.n_particles]
+        f_vals = self.f_val_buffer[:self.size*self.n_particles]
+        return positions, f_vals
