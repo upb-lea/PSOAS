@@ -79,8 +79,12 @@ class Surrogate():
 
             helpful_points = np.squeeze(helpful_points)
 
-            curr_positions = curr_positions[helpful_points]
-            curr_f_vals = curr_f_vals[helpful_points]
+            if curr_positions.shape[0] == 1:
+                if not helpful_points:
+                    return
+            else:
+                curr_positions = curr_positions[helpful_points]
+                curr_f_vals = curr_f_vals[helpful_points]
 
         self.positions = np.concatenate((self.positions, curr_positions), axis=0)
         self.f_vals = np.concatenate((self.f_vals, curr_f_vals))

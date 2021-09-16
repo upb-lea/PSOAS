@@ -140,16 +140,16 @@ class Optimizer():
         self.Swarm.pbest[bool_decider] = self.Swarm.f_values[bool_decider]
         self.Swarm.pbest_position[bool_decider, :] = self.Swarm.position[bool_decider, :]
 
-    def update_surrogate(self):
+    def update_surrogate(self, positions, f_values):
         """
         This function handles the update of the surrogate by first predicting a point,
         then creating a new model based on the surrogate's data points and the PSO's
         current data points, and then updating the data.
         """
-        mean, std = self.SurrogateModel.sm.predict(self.Swarm.position)
+        mean, std = self.SurrogateModel.sm.predict(positions)
 
-        self.SurrogateModel.fit_model(self.Swarm.position, self.Swarm.f_values)
-        self.SurrogateModel.update_data(self.Swarm.position, self.Swarm.f_values, True, mean, std)
+        self.SurrogateModel.fit_model(positions, f_values)
+        self.SurrogateModel.update_data(positions, f_values, True, mean, std)
 
     def use_surrogate_prediction(self):
         """
@@ -179,7 +179,8 @@ class Optimizer():
                 self.Swarm.position[worst_indices[i]] = prediction_point
                 self.Swarm.f_values[worst_indices[i]] = self.Swarm.func(prediction_point[None,:])
 
-                self.update_surrogate()
+                self.update_surrogate(self.Swarm.position[worst_indices[i]][None, :], 
+                                      np.atleast_1d(self.Swarm.f_values[worst_indices[i]]))
 
             self.enforce_constraints(check_position=True, check_velocity=False)
 
@@ -221,7 +222,7 @@ class Optimizer():
 
                 assert hasattr(self, 'SurrogateModel')
                 if i > 0:
-                    self.update_surrogate()
+                    self.update_surrogate(self.Swarm.position, self.Swarm.f_values)
 
                 if self.options['surrogate_options']['3d_plot']:
                     self.SurrogateModel.plotter_3d()
