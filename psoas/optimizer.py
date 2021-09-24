@@ -12,7 +12,7 @@ import pprint
 from tqdm import tqdm
 import tableprint as tp
 
-from psoas.operations import normal_distribution, counting_function, counting_function_cec2013_single
+from psoas.utils import counting_function, counting_function_cec2013_single
 from psoas.swarm import Swarm
 from psoas.surrogate import Surrogate
 
@@ -133,7 +133,7 @@ class Optimizer():
         if self.options['surrogate_options']['use_surrogate']:
             # reinitializes the velocity for the predicted points
             if self.options['surrogate_options']['prediction_mode'] == 'standard':
-                self.Swarm.velocity[self.worst_idx] = normal_distribution(1, self.dim)
+                self.Swarm.velocity[self.worst_idx] = np.random.normal(size=(1, self.dim))
             elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
                 m = self.options['surrogate_options']['m']
                 self.Swarm.velocity[self.worst_indices] = np.random.normal(size=(m, self.dim))

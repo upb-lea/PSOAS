@@ -7,7 +7,7 @@ from smt.sampling_methods import LHS
 import matplotlib.pyplot as plt
 import imageio
 
-from psoas.operations import normal_distribution, random_hypersphere_draw, uniform_distribution
+from psoas.utils import random_hypersphere_draw
 
 
 class Swarm():
@@ -123,8 +123,8 @@ class Swarm():
         
         c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
        
-        U_1 = uniform_distribution(self.n_particles, self.dim)
-        U_2 = uniform_distribution(self.n_particles, self.dim)
+        U_1 = np.random.uniform(size=(self.n_particles, self.dim))
+        U_2 = np.random.uniform(size=(self.n_particles, self.dim))
 
         proj_pbest = self.positions + c_1 * U_1 * (self.pbest_positions - self.positions)
         proj_lbest = self.positions + c_2 * U_2 * (lbest_positions - self.positions) 
@@ -134,7 +134,7 @@ class Swarm():
             current_prediction is not None
            ):
             c_3 = 0.75
-            U_3 = uniform_distribution(self.n_particles, self.dim)
+            U_3 = np.random.uniform(size=(self.n_particles, self.dim))
             proj_pred = self.positions + c_3 * U_3 * (current_prediction - self.positions)
 
             center = (self.positions + proj_pbest + proj_lbest + proj_pred) / 4
@@ -170,7 +170,7 @@ class Swarm():
 
         comp_identity = 2*np.ones((self.n_particles, self.dim))
 
-        U_1 = uniform_distribution(self.n_particles, self.dim)
+        U_1 = np.random.uniform(size=(self.n_particles, self.dim))
 
         proj_pbest = self.positions + c_1 * 2 * U_1 * (self.pbest_positions - self.positions)
         proj_lbest = self.positions + c_2 * (comp_identity - 2 * U_1) * (lbest_positions - self.positions)

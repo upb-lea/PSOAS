@@ -8,7 +8,7 @@ from scipy.stats import norm
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
-from psoas.operations import TimeDataBuffer, ValueDataBuffer
+from psoas.utils import TimeDataBuffer, ValueDataBuffer
 
 import GPyOpt
 from GPyOpt.models.gpmodel import GPModel, GPModel_MCMC
