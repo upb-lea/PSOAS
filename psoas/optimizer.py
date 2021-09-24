@@ -102,107 +102,6 @@ class Optimizer():
             else:
                 raise NameError(f'The key "{key}" does not exist in the dict.')
 
-    def update_swarm(self):
-        """Updates the Swarm instance.
-
-        The velocity update for the swarm is calculated here and the positions of all particles
-        in the swarm are updated using this new velocity. The constraints are enforced by returning 
-        any particle which left the valid search space, back into it. Lastly, the personal best 
-        point for each particle is updated, if the function value at the new location is better than
-        the previous personal best position.
-        """
-        if not self.options['surrogate_options']['use_surrogate']:
-            self.Swarm.update()
-        else:
-            if (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
-                self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
-            ):
-                self.Swarm.update(self.current_prediction)
-            elif self.options['surrogate_options']['prediction_mode'] == 'standard':
-                self.Swarm.update(worst_idx=self.worst_idx)
-            elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-                self.Swarm.update(worst_indices=self.worst_indices, other_indices=self.other_indices)                
-
-    def enforce_constraints(self, check_position, check_velocity):
-        """Wraps the enforce_constraints method from the swarm."""
-        self.Swarm.enforce_constraints(check_position, check_velocity)
-
-    def update_surrogate(self, positions, f_values):
-        """
-        This function handles the update of the surrogate by first predicting a point,
-        then creating a new model based on the surrogate's data points and the PSO's
-        current data points, and then updating the data.
-        """
-        if self.options['surrogate_options']['use_buffer']:
-            self.SurrogateModel.update_data_buffer(positions, f_values)
-            self.SurrogateModel.fit_model_buffer()
-        else:
-            mean, std = self.SurrogateModel.sm.predict(positions)
-
-            self.SurrogateModel.fit_model(positions, f_values)
-            self.SurrogateModel.update_data(positions, f_values, True, mean, std)
-
-    def use_surrogate_prediction(self):
-        """
-        This function handles the different predication methods.
-        """
-        if self.options['surrogate_options']['prediction_mode'] == 'standard':
-            prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
-            prediction_point = prediction[0][0]
-
-            self.worst_idx = np.argmax(self.Swarm.pbest)
-            self.Swarm.positions[self.worst_idx] = prediction_point
-
-        if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-            m = self.options['surrogate_options']['m']
-            
-            worst_indices = np.argsort(self.Swarm.pbest)[-m:][::-1]
-            other_indices = np.argsort(self.Swarm.pbest)[:-m][::-1]
-
-            self.other_indices = other_indices
-            self.worst_indices = worst_indices
-
-            m_prediction_points = []
-            m_prediction_values = []
-
-            for i in range(m):
-
-                position_prediction, std_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
-                prediction_point = position_prediction[0]
-
-                f_val = self.Swarm.func(prediction_point[None,:])
-
-                m_prediction_points.append(prediction_point)
-                m_prediction_values.append(f_val)
-
-                self.Swarm.positions[worst_indices[i]] = prediction_point
-                self.Swarm.f_values[worst_indices[i]] = f_val
-                
-                if self.options['surrogate_options']['use_buffer']:
-                    input_positions, input_f_vals = self.SurrogateModel.surrogate_memory.fetch()
-
-                    tmp_positions = np.vstack((input_positions, m_prediction_points))
-                    tmp_f_vals = np.vstack((input_f_vals, m_prediction_values))
-
-                    tmp_positions, idx = np.unique(tmp_positions, return_index=True, axis=0)
-                    tmp_f_vals = tmp_f_vals[idx]
-
-                    self.SurrogateModel.sm.updateModel(tmp_positions, tmp_f_vals, None, None)
-
-                else:
-                    self.update_surrogate(self.Swarm.positions[worst_indices[i]][None, :], 
-                                          np.atleast_1d(self.Swarm.f_values[worst_indices[i]]))
-
-            self.enforce_constraints(check_position=True, check_velocity=False)
-
-        elif (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
-              self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
-             ):
-            prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
-
-            prediction_point = prediction[0][0]
-            self.current_prediction = prediction_point
-
     def optimize(self):
         """Main optimization routine.
 
@@ -234,7 +133,7 @@ class Optimizer():
 
                 assert hasattr(self, 'SurrogateModel')
                 if i > 0:
-                    self.update_surrogate(self.Swarm.positions, self.Swarm.f_values)
+                    self.SurrogateModel.update_surrogate(self.Swarm.positions, self.Swarm.f_values)
 
                 if self.options['surrogate_options']['3d_plot']:
                     self.SurrogateModel.plotter_3d()
@@ -298,6 +197,49 @@ class Optimizer():
         results['n_fun_evals'] = self.func.eval_count
 
         return results
+    
+    def update_swarm(self):
+        """Updates the Swarm instance.
+
+        The velocity update for the swarm is calculated here and the positions of all particles
+        in the swarm are updated using this new velocity. The constraints are enforced by returning 
+        any particle which left the valid search space, back into it. Lastly, the personal best 
+        point for each particle is updated, if the function value at the new location is better than
+        the previous personal best position.
+        """
+        if not self.options['surrogate_options']['use_surrogate']:
+            self.Swarm.update()
+        else:
+            if (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
+                self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
+            ):
+                self.Swarm.update(self.current_prediction)
+            elif self.options['surrogate_options']['prediction_mode'] == 'standard':
+                self.Swarm.update(worst_idx=self.worst_idx)
+            elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+                self.Swarm.update(worst_indices=self.worst_indices, other_indices=self.other_indices)                
+
+    def enforce_constraints(self, check_position, check_velocity):
+        """Wraps the enforce_constraints method from the swarm."""
+        self.Swarm.enforce_constraints(check_position, check_velocity)
+
+    def use_surrogate_prediction(self):
+        """
+        This function handles the different prediction methods.
+        """
+        if self.options['surrogate_options']['prediction_mode'] == 'standard':
+            pos_prediction, f_val_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+            self.worst_idx = np.argmax(self.Swarm.pbest)
+            self.Swarm.positions[self.worst_idx] = pos_prediction
+
+        if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+            self.worst_indices, self.other_indices = self.SurrogateModel.use_standard_m_prediction(self.Swarm)
+
+        elif (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
+              self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
+             ):
+            pos_prediction, f_val_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+            self.current_prediction = pos_prediction
 
     def check_max_func_evals(self):
         """Returns true if the optimization should be terminated due to too many function evaluations.
