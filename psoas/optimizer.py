@@ -199,7 +199,10 @@ class Optimizer():
                     tmp_positions = np.vstack((input_positions, m_prediction_points))
                     tmp_f_vals = np.vstack((input_f_vals, m_prediction_values))
 
-                    self.SurrogateModel.sm.updateModel(tmp_positions,tmp_f_vals, None, None)
+                    tmp_positions, idx = np.unique(tmp_positions, return_index=True, axis=0)
+                    tmp_f_vals = tmp_f_vals[idx]
+
+                    self.SurrogateModel.sm.updateModel(tmp_positions, tmp_f_vals, None, None)
 
                 else:
                     self.update_surrogate(self.Swarm.position[worst_indices[i]][None, :], 

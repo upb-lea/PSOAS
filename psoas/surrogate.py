@@ -145,7 +145,7 @@ class Surrogate():
         acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
 
         if self.surrogate_options['surrogate_type'] == 'GP':
-            acquisition = GPyOpt.acquisitions.AcquisitionEI(self.sm, space, acquisition_optimizer, jitter=0)
+            acquisition = GPyOpt.acquisitions.AcquisitionEI(self.sm, space, acquisition_optimizer, jitter=0.01)
         elif self.surrogate_options['surrogate_type'] == 'GP_MPI':
             acquisition = GPyOpt.acquisitions.AcquisitionMPI(self.sm, space, acquisition_optimizer, jitter=0.01)
         elif self.surrogate_options['surrogate_type'] == 'GP_MCMC':
