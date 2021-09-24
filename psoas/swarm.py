@@ -14,7 +14,7 @@ class Swarm():
     """Swarm class implementation.
 
     Holds all information regarding the swarm used in the PSO. Most notably the current
-    position and velocity of all particles and the position and function value of the personal 
+    positions and velocities of all particles and the position and function value of the personal 
     best position of each particle. Moreover it holds functions to compute the estimated 
     global optimum and a local optimum which depends on the topology.
     """
@@ -32,44 +32,26 @@ class Swarm():
         assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape}!"
 
         self.swarm_options = swarm_options
-        self.surrogate_options = surrogate_options
+        self.surrogate_options = surrogate_options  # necessary for some specific velocity updates
 
         self.func = func
         self.n_particles = n_particles
         self.dim = dim
         self.constr = constr
-        
+        self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
+        self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
+        self.velocity_reset = np.zeros((n_particles, dim))
+
         self._calculate_initial_values()        
 
         # preparation for contour plot
         if swarm_options['3d_plot'] is True:
-            assert dim == 2, f'Got dim {self.dim}. Expect dim 2.'
+            assert dim == 2, f'Got dim {self.dim}. Expected dim = 2.'
 
             self.data_plot = {}
             self.data_plot = self.get_contour(self.data_plot)
             self.gif_counter = 0
             self.gif_filenames = []
-
-    def evaluate_function(self, x):
-        """
-        Evaluates the function specified by the class attribute self.func.
-
-        This function asserts that the input is in shape (self.n_particles, self.dim), i.e. that 
-        the given function is evaluated for each particle at the current position in the 
-        self.dim-dimensional space. Therefore the output is of shape (self.n_particles,).
-
-        Args:
-            x: Positions of all particles in the search space to be evaluated, shape is (self.n_particles, self.dim)
-        
-        Returns:
-            An array with the function evaluation for each particle with shape (self.n_particles,)
-        """
-        # assert x.shape == (self.n_particles, self.dim)
-
-        res = self.func(x)
-        # assert res.shape == (self.n_particles,)
-
-        return res
 
     def _calculate_initial_values(self):
         """Calculates the initial values for the position using Latin Hypercube Sampling of each
@@ -79,9 +61,9 @@ class Swarm():
         """
         lhs_sampling = LHS(xlimits=self.constr) # Set up latin hypercube sampling within given constraints
         self.positions = lhs_sampling(self.n_particles)
-        self.f_values = self.evaluate_function(self.positions)
+        self.f_values = self.func(self.positions)
 
-        self.velocity = (lhs_sampling(self.n_particles) - self.positions)/2
+        self.velocities = (lhs_sampling(self.n_particles) - self.positions)/2
 
         self.pbest_positions = self.positions.copy()
         self.pbest = self.f_values.copy()
@@ -111,13 +93,80 @@ class Swarm():
         else:
             raise ValueError(f"Expected global, ring or adaptive random for the topology. Got {self.options['topology']}")
 
+    def update(self, current_prediction=None, worst_idx=None, worst_indices=None, other_indices=None):
+        """The velocity update for the swarm is calculated here and the positions of all particles
+        in the swarm are updated using this new velocity. The constraints are enforced by returning 
+        any particle which left the valid search space, back into it. Lastly, the personal best 
+        point for each particle is updated, if the function value at the new location is better than
+        the previous personal best position.
+        """
+        self.compute_velocity(current_prediction)
+        self.enforce_constraints(check_position=False, check_velocity=True)
+
+        if self.surrogate_options['use_surrogate']:
+            # ensures that the points predicted by the surrogate do not move
+            if self.surrogate_options['prediction_mode'] == 'standard':
+                self.velocities[worst_idx] = 0
+            elif self.surrogate_options['prediction_mode'] == 'standard_m':
+                self.velocities[worst_indices] = 0
+
+        self.positions = self.positions + self.velocities
+
+        if self.surrogate_options['use_surrogate']:
+            # reinitializes the velocity for the predicted points
+            if self.surrogate_options['prediction_mode'] == 'standard':
+                self.velocities[worst_idx] = np.random.normal(size=(1, self.dim))
+            elif self.surrogate_options['prediction_mode'] == 'standard_m':
+                m = self.surrogate_options['m']
+                self.velocities[worst_indices] = np.random.normal(size=(m, self.dim))
+
+        self.enforce_constraints(check_position=True, check_velocity=False)
+
+        if (self.surrogate_options['use_surrogate'] and 
+            self.surrogate_options['prediction_mode'] == 'standard_m'
+           ):
+            self.f_values[other_indices] = self.func(self.positions[other_indices])
+        else:
+            self.f_values = self.func(self.positions)
+
+        # update pbest
+        bool_decider = self.pbest > self.f_values
+
+        self.pbest[bool_decider] = self.f_values[bool_decider]
+        self.pbest_positions[bool_decider, :] = self.positions[bool_decider, :]
+
+    def enforce_constraints(self, check_position, check_velocity):
+        """Enforces the constraints of the valid search space.
+
+        Any particle which left the valid search space is moved back into it. Furthermore
+        the velocity which brought the particle out of the valid search space is put to 
+        zero.
+
+        TODO: replace with clip!
+        """
+        if check_position:
+            bool_below = self.positions < self.constr[:, 0]
+            bool_above = self.positions > self.constr[:, 1]
+
+            self.positions[bool_below] = self.constr_below[bool_below]
+            self.positions[bool_above] = self.constr_above[bool_above]
+            self.velocities[bool_below] = self.velocity_reset[bool_below]
+            self.velocities[bool_above] = self.velocity_reset[bool_above]
+
+        if check_velocity:
+            bool_below = self.velocities < self.constr[:, 0]
+            bool_above = self.velocities > self.constr[:, 1]
+
+            self.velocities[bool_below] = self.constr_below[bool_below]
+            self.velocities[bool_above] = self.constr_above[bool_above]
+
     def _velocity_update_SPSO2011(self, current_prediction):
         """
         This implementation of the velocity update is based on the Standard Particle Swarm 
         Optimization 2011 (SPSO2011) as presented in the paper ZambranoBigiarini2013 
         (doi: 10.1109/CEC.2013.6557848).
         Args:
-            current_prediction: Predicated optimum of the surroagte with shape self.dim
+            current_prediction: Predicted optimum of the surroagte with shape self.dim
         """
         lbest, lbest_positions = self.compute_lbest()
         
@@ -157,11 +206,12 @@ class Swarm():
         sample_points = center + offset
         
         omega = 1 / (2*np.log(2))
-        self.velocity = omega * self.velocity + sample_points - self.positions
+        self.velocities = omega * self.velocities + sample_points - self.positions
 
     def _velocity_update_MSPSO2011(self):
         """
-        This implementation of the velocity update is based on the paper Hariya2016, based on the SPSO2011.
+        This implementation of the velocity update is based on the paper Hariya2016, 
+        which in itself based on the SPSO2011.
         """
         lbest, lbest_positions = self.compute_lbest()
 
@@ -183,7 +233,7 @@ class Swarm():
 
         sample_points = center + offset
         
-        self.velocity = omega * self.velocity + sample_points - self.positions
+        self.velocities = omega * self.velocities + sample_points - self.positions
 
     def compute_velocity(self, current_prediction):
         """
@@ -282,7 +332,7 @@ class Swarm():
         """
         plt.plot(self.positions[:,0], self.positions[:,1], 'o')
         plt.contourf(self.data_plot['x'], self.data_plot['y'], self.data_plot['z'])
-        plt.quiver(self.positions[:,0], self.positions[:,1], self.velocity[:,0], self.velocity[:,1], units='xy', scale_units='xy', scale=1)
+        plt.quiver(self.positions[:,0], self.positions[:,1], self.velocities[:,0], self.velocities[:,1], units='xy', scale_units='xy', scale=1)
 
         plt.xlim((-100, 100))
         plt.ylim((-100, 100))

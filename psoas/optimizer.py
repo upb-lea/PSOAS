@@ -58,9 +58,6 @@ class Optimizer():
                                             self.options["surrogate_options"])
 
         self.Swarm.no_change_in_gbest = False
-        self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
-        self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
-        self.velocity_reset = np.zeros((n_particles, dim))
 
     def _fetch_default_options(self):
         """Returns a dict containing the default options."""
@@ -114,44 +111,21 @@ class Optimizer():
         point for each particle is updated, if the function value at the new location is better than
         the previous personal best position.
         """
-        if hasattr(self, 'current_prediction'):
-            self.Swarm.compute_velocity(self.current_prediction)
+        if not self.options['surrogate_options']['use_surrogate']:
+            self.Swarm.update()
         else:
-            self.Swarm.compute_velocity(None)
-
-        self.enforce_constraints(check_position=False, check_velocity=True)
-
-        if self.options['surrogate_options']['use_surrogate']:
-            # ensures that the points predicted by the surrogate do not move
-            if self.options['surrogate_options']['prediction_mode'] == 'standard':
-                self.Swarm.velocity[self.worst_idx] = 0
+            if (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
+                self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
+            ):
+                self.Swarm.update(self.current_prediction)
+            elif self.options['surrogate_options']['prediction_mode'] == 'standard':
+                self.Swarm.update(worst_idx=self.worst_idx)
             elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-                self.Swarm.velocity[self.worst_indices] = 0
+                self.Swarm.update(worst_indices=self.worst_indices, other_indices=self.other_indices)                
 
-        self.Swarm.positions = self.Swarm.positions + self.Swarm.velocity
-
-        if self.options['surrogate_options']['use_surrogate']:
-            # reinitializes the velocity for the predicted points
-            if self.options['surrogate_options']['prediction_mode'] == 'standard':
-                self.Swarm.velocity[self.worst_idx] = np.random.normal(size=(1, self.dim))
-            elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-                m = self.options['surrogate_options']['m']
-                self.Swarm.velocity[self.worst_indices] = np.random.normal(size=(m, self.dim))
-
-        self.enforce_constraints(check_position=True, check_velocity=False)
-
-        if (self.options['surrogate_options']['use_surrogate'] and 
-            self.options['surrogate_options']['prediction_mode'] == 'standard_m'
-           ):
-            self.Swarm.f_values[self.other_indices] = self.Swarm.evaluate_function(self.Swarm.positions[self.other_indices])
-        else:
-            self.Swarm.f_values = self.Swarm.evaluate_function(self.Swarm.positions)
-
-        # update pbest
-        bool_decider = self.Swarm.pbest > self.Swarm.f_values
-
-        self.Swarm.pbest[bool_decider] = self.Swarm.f_values[bool_decider]
-        self.Swarm.pbest_positions[bool_decider, :] = self.Swarm.positions[bool_decider, :]
+    def enforce_constraints(self, check_position, check_velocity):
+        """Wraps the enforce_constraints method from the swarm."""
+        self.Swarm.enforce_constraints(check_position, check_velocity)
 
     def update_surrogate(self, positions, f_values):
         """
@@ -324,31 +298,6 @@ class Optimizer():
         results['n_fun_evals'] = self.func.eval_count
 
         return results
-
-    def enforce_constraints(self, check_position, check_velocity):
-        """Enforces the constraints of the valid search space.
-
-        Any particle which left the valid search space is moved back into it. Furthermore
-        the velocity which brought the particle out of the valid search space is put to 
-        zero.
-
-        TODO: replace with clip
-        """
-        if check_position:
-            bool_below = self.Swarm.positions < self.Swarm.constr[:, 0]
-            bool_above = self.Swarm.positions > self.Swarm.constr[:, 1]
-
-            self.Swarm.positions[bool_below] = self.constr_below[bool_below]
-            self.Swarm.positions[bool_above] = self.constr_above[bool_above]
-            self.Swarm.velocity[bool_below] = self.velocity_reset[bool_below]
-            self.Swarm.velocity[bool_above] = self.velocity_reset[bool_above]
-
-        if check_velocity:
-            bool_below = self.Swarm.velocity < self.Swarm.constr[:, 0]
-            bool_above = self.Swarm.velocity > self.Swarm.constr[:, 1]
-
-            self.Swarm.velocity[bool_below] = self.constr_below[bool_below]
-            self.Swarm.velocity[bool_above] = self.constr_above[bool_above]
 
     def check_max_func_evals(self):
         """Returns true if the optimization should be terminated due to too many function evaluations.
