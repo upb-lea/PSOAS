@@ -79,11 +79,11 @@ class EvaluationSingle(Evaluation):
         for i in tqdm(range(n_runs), disable=disable_tqdm):
             try:
                 res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, max_func_evals, options)
-            except numpy.linalg.LinAlgError:
+            except np.linalg.LinAlgError:
                 counter += 1
                 i = i-1
                 if counter > 200:
-                    raise RuntimeError(f'Tried function {self.func} more then {counter}')
+                    raise RuntimeError(f'Tried function {self.func} more than {counter}')
                 continue
             self.df.loc[i, 'n_iter'] = res['iter']
             self.df.loc[i, 'n_fun_evals'] = res['n_fun_evals']
