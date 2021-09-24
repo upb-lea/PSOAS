@@ -45,7 +45,7 @@ class counting_function_cec2013_single(counting_function):
         return res
 
 
-class DataBuffer:
+class TimeDataBuffer:
     
     def __init__(self, dim, n_particles, n_slots=4):
 
@@ -71,4 +71,47 @@ class DataBuffer:
 
         positions = self.position_buffer[:self.size*self.n_particles]
         f_vals = self.f_val_buffer[:self.size*self.n_particles]
+        return positions, f_vals
+
+
+class ValueDataBuffer:
+    
+    def __init__(self, dim, buffer_size):
+
+        self.position_buffer = np.zeros((buffer_size, dim), dtype=np.float32)
+        self.f_val_buffer = np.zeros((buffer_size, 1), dtype=np.float32)
+        self.ptr = 0
+        self.size = 0
+        self.max_size = buffer_size
+    
+    def store(self, positions, f_vals):
+        length = positions.shape[0]        
+
+        for i in range(length):
+            
+            # check if the position is already stored in the buffer
+            already_in_buffer = (positions[i] == self.position_buffer).all(axis=-1).any()
+            if already_in_buffer:
+                continue
+            
+            # if the buffer is not full yet, the new point is added 
+            # regardless of its value
+            if self.size < self.max_size:
+                self.position_buffer[self.ptr] = positions[i]
+                self.f_val_buffer[self.ptr] = f_vals[i]
+                self.ptr += 1
+                self.size += 1
+            
+            # if the buffer is full, check if the new point is better
+            # than the current worst point 
+            else:
+                idx_max = np.argmax(self.f_val_buffer)
+                f_val_max = self.f_val_buffer[idx_max]
+                if f_vals[i] < f_val_max:
+                    self.position_buffer[idx_max] = positions[i]
+                    self.f_val_buffer[idx_max] = f_vals[i]
+    
+    def fetch(self):
+        positions = self.position_buffer[:self.size]
+        f_vals = self.f_val_buffer[:self.size]
         return positions, f_vals

@@ -57,6 +57,7 @@ class Optimizer():
                         'surrogate_options': {'surrogate_type': 'GP',
                                               'use_surrogate': True,
                                               'use_buffer': True,
+                                              'buffer_type': 'time',
                                               'n_slots': 4,
                                               '3d_plot': False,
                                               'interval': 10,

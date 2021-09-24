@@ -8,7 +8,7 @@ from scipy.stats import norm
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
-from psoas.operations import DataBuffer
+from psoas.operations import TimeDataBuffer, ValueDataBuffer
 
 import GPyOpt
 from GPyOpt.models.gpmodel import GPModel, GPModel_MCMC
@@ -48,7 +48,11 @@ class Surrogate():
         self.f_vals = init_f_vals.copy()
 
         if self.surrogate_options['use_buffer']:
-            self.surrogate_memory = DataBuffer(self.dim, self.n_particles, self.surrogate_options['n_slots'])
+            if self.surrogate_options['buffer_type'] == 'time':
+                self.surrogate_memory = TimeDataBuffer(self.dim, self.n_particles, self.surrogate_options['n_slots'])
+
+            elif self.surrogate_options['buffer_type'] == 'value':
+                self.surrogate_memory = ValueDataBuffer(self.dim, self.n_particles * self.surrogate_options['n_slots'])
             self.surrogate_memory.store(init_position, init_f_vals[:, None])
 
         self.sm.updateModel(init_position, init_f_vals[:, None], None, None)
@@ -142,7 +146,7 @@ class Surrogate():
             mixed_domain.append(dim_dict)
         space = GPyOpt.Design_space(mixed_domain)
 
-        acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
+        acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space, optimizer='lbfgs')
 
         if self.surrogate_options['surrogate_type'] == 'GP':
             acquisition = GPyOpt.acquisitions.AcquisitionEI(self.sm, space, acquisition_optimizer, jitter=0.01)
