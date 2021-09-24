@@ -70,14 +70,21 @@ class EvaluationSingle(Evaluation):
 
     def evaluate_function(self, n_particles, dim, max_iter, max_func_evals, options, n_runs, disable_tqdm=False):
         keys = ['n_iter', 'n_fun_evals', 'term_flag', 'func_opt', 'mean_pbest', 'var_pbest']
+        counter = 0
         if hasattr(self, 'ground_truth'):
             keys.append('dist_gt')
         if hasattr(self, 'opt_value'):
             keys.insert(3, 'diff_opt_value')
-
         self._create_dataframe(keys, n_runs)
         for i in tqdm(range(n_runs), disable=disable_tqdm):
-            res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, max_func_evals, options)
+            try:
+                res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, max_func_evals, options)
+            except numpy.linalg.LinAlgError:
+                counter += 1
+                i = i-1
+                if counter > 200:
+                    raise RuntimeError(f'Tried function {self.func} more then {counter}')
+                continue
             self.df.loc[i, 'n_iter'] = res['iter']
             self.df.loc[i, 'n_fun_evals'] = res['n_fun_evals']
             self.df.loc[i, 'term_flag'] = res['term_flag']
@@ -89,6 +96,8 @@ class EvaluationSingle(Evaluation):
                 self.df.loc[i, 'dist_gt'] = np.linalg.norm(res['x_opt']- self.ground_truth)
             if 'diff_opt_value' in self.df.keys():
                 self.df.loc[i, 'diff_opt_value'] = res['func_opt'] - self.opt_value
+        if counter > 0:
+            print(f'Repeats for function {self.func} : {counter}')
         
     def get_statistical_information(self):
         mean_iters = np.mean(self.df['n_iter'])
