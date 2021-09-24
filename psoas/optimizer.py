@@ -9,9 +9,8 @@ Typical usage example:
 import numpy as np
 import matplotlib.pyplot as plt
 import pprint
-from numpy.core.numeric import indices
-import tableprint as tp
 from tqdm import tqdm
+import tableprint as tp
 
 from psoas.operations import normal_distribution, counting_function, counting_function_cec2013_single
 from psoas.swarm import Swarm
@@ -44,28 +43,53 @@ class Optimizer():
             options: Options for the optimizer and swarm
         """
         # default options
-        self.options = {'eps_abs': 0.001,
-                        'eps_rel': 0.001,
-                        'stalling_steps': 10,
-                        'verbose': False,
-                        'verbose_interval': 50,
-                        'do_plots': False,
-                        'swarm_options': {'mode': 'SPSO2011', 
-                                          'topology': 'global',
-                                          '3d_plot': False,
-                                          'create_gif': False}, 
-                        'surrogate_options': {'surrogate_type': 'GP',
-                                              'use_surrogate': True,
-                                              'use_buffer': True,
-                                              'buffer_type': 'time',
-                                              'n_slots': 4,
-                                              '3d_plot': False,
-                                              'interval': 10,
-                                              'm': 0,
-                                              'prediction_mode': 'standard',
-                                              'prioritization': 0.2}
-                        }
+        self.options = self._fetch_default_options()
+        self._update_options(kwargs)
+        
+        self.func = counting_function_cec2013_single(func)
+        self.dim = dim
+        self.max_iter = max_iter
+        self.max_func_evals = max_func_evals
+        self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'], 
+                           self.options['surrogate_options'])
 
+        if self.options['surrogate_options']['use_surrogate']:
+            self.SurrogateModel = Surrogate(self.Swarm.positions, self.Swarm.f_values, 
+                                            self.options["surrogate_options"])
+
+        self.Swarm.no_change_in_gbest = False
+        self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
+        self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
+        self.velocity_reset = np.zeros((n_particles, dim))
+
+    def _fetch_default_options(self):
+        """Returns a dict containing the default options."""
+
+        default_options = {'eps_abs': 0.0,
+                           'eps_rel': 0.0,
+                           'stalling_steps': 10,
+                           'verbose': False,
+                           'verbose_interval': 1,
+                           'do_plots': False,
+                           'swarm_options': {'mode': 'SPSO2011', 
+                                             'topology': 'global',
+                                             '3d_plot': False,
+                                             'create_gif': False},
+                           'surrogate_options': {'surrogate_type': 'GP',
+                                                 'use_surrogate': True,
+                                                 'use_buffer': True,
+                                                 'buffer_type': 'time',
+                                                 'n_slots': 4,
+                                                 '3d_plot': False,
+                                                 'interval': 1,
+                                                 'm': 5,
+                                                 'prediction_mode': 'standard',
+                                                 'prioritization': 0.2}
+                           }
+        return default_options
+
+    def _update_options(self, kwargs):
+        """Updates the options dict with the input parameters."""
         for key, value in kwargs.items():
             if type(value) is dict:
                 for inner_key, inner_value in value.items():
@@ -80,22 +104,6 @@ class Optimizer():
             
             else:
                 raise NameError(f'The key "{key}" does not exist in the dict.')
-
-        self.func = counting_function_cec2013_single(func)
-        self.dim = dim
-        self.max_iter = max_iter
-        self.max_func_evals = max_func_evals
-        self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'], 
-                           self.options['surrogate_options'])
-
-        if self.options['surrogate_options']['use_surrogate']:
-            self.SurrogateModel = Surrogate(self.Swarm.position, self.Swarm.f_values, 
-                                            self.options["surrogate_options"])
-
-        self.Swarm.no_change_in_gbest = False
-        self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
-        self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
-        self.velocity_reset = np.zeros((n_particles, dim))
 
     def update_swarm(self):
         """Updates the Swarm instance.
@@ -120,7 +128,7 @@ class Optimizer():
             elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
                 self.Swarm.velocity[self.worst_indices] = 0
 
-        self.Swarm.position = self.Swarm.position + self.Swarm.velocity
+        self.Swarm.positions = self.Swarm.positions + self.Swarm.velocity
 
         if self.options['surrogate_options']['use_surrogate']:
             # reinitializes the velocity for the predicted points
@@ -132,16 +140,18 @@ class Optimizer():
 
         self.enforce_constraints(check_position=True, check_velocity=False)
 
-        # update pbest
-        if self.options['surrogate_options']['prediction_mode'] == 'standard':
-            self.Swarm.f_values = self.Swarm.evaluate_function(self.Swarm.position)
-        elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-            self.Swarm.f_values[self.other_indices] = self.Swarm.evaluate_function(self.Swarm.position[self.other_indices])
+        if (self.options['surrogate_options']['use_surrogate'] and 
+            self.options['surrogate_options']['prediction_mode'] == 'standard_m'
+           ):
+            self.Swarm.f_values[self.other_indices] = self.Swarm.evaluate_function(self.Swarm.positions[self.other_indices])
+        else:
+            self.Swarm.f_values = self.Swarm.evaluate_function(self.Swarm.positions)
 
+        # update pbest
         bool_decider = self.Swarm.pbest > self.Swarm.f_values
 
         self.Swarm.pbest[bool_decider] = self.Swarm.f_values[bool_decider]
-        self.Swarm.pbest_position[bool_decider, :] = self.Swarm.position[bool_decider, :]
+        self.Swarm.pbest_positions[bool_decider, :] = self.Swarm.positions[bool_decider, :]
 
     def update_surrogate(self, positions, f_values):
         """
@@ -167,7 +177,7 @@ class Optimizer():
             prediction_point = prediction[0][0]
 
             self.worst_idx = np.argmax(self.Swarm.pbest)
-            self.Swarm.position[self.worst_idx] = prediction_point
+            self.Swarm.positions[self.worst_idx] = prediction_point
 
         if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
             m = self.options['surrogate_options']['m']
@@ -191,7 +201,7 @@ class Optimizer():
                 m_prediction_points.append(prediction_point)
                 m_prediction_values.append(f_val)
 
-                self.Swarm.position[worst_indices[i]] = prediction_point
+                self.Swarm.positions[worst_indices[i]] = prediction_point
                 self.Swarm.f_values[worst_indices[i]] = f_val
                 
                 if self.options['surrogate_options']['use_buffer']:
@@ -206,7 +216,7 @@ class Optimizer():
                     self.SurrogateModel.sm.updateModel(tmp_positions, tmp_f_vals, None, None)
 
                 else:
-                    self.update_surrogate(self.Swarm.position[worst_indices[i]][None, :], 
+                    self.update_surrogate(self.Swarm.positions[worst_indices[i]][None, :], 
                                           np.atleast_1d(self.Swarm.f_values[worst_indices[i]]))
 
             self.enforce_constraints(check_position=True, check_velocity=False)
@@ -245,11 +255,12 @@ class Optimizer():
             prior_gbest, _  = self.Swarm.compute_gbest()
 
             if (self.options['surrogate_options']['use_surrogate']
-                and i % self.options['surrogate_options']['interval'] == 0):
+                and i % self.options['surrogate_options']['interval'] == 0
+               ):
 
                 assert hasattr(self, 'SurrogateModel')
                 if i > 0:
-                    self.update_surrogate(self.Swarm.position, self.Swarm.f_values)
+                    self.update_surrogate(self.Swarm.positions, self.Swarm.f_values)
 
                 if self.options['surrogate_options']['3d_plot']:
                     self.SurrogateModel.plotter_3d()
@@ -324,11 +335,11 @@ class Optimizer():
         TODO: replace with clip
         """
         if check_position:
-            bool_below = self.Swarm.position < self.Swarm.constr[:, 0]
-            bool_above = self.Swarm.position > self.Swarm.constr[:, 1]
+            bool_below = self.Swarm.positions < self.Swarm.constr[:, 0]
+            bool_above = self.Swarm.positions > self.Swarm.constr[:, 1]
 
-            self.Swarm.position[bool_below] = self.constr_below[bool_below]
-            self.Swarm.position[bool_above] = self.constr_above[bool_above]
+            self.Swarm.positions[bool_below] = self.constr_below[bool_below]
+            self.Swarm.positions[bool_above] = self.constr_above[bool_above]
             self.Swarm.velocity[bool_below] = self.velocity_reset[bool_below]
             self.Swarm.velocity[bool_above] = self.velocity_reset[bool_above]
 
