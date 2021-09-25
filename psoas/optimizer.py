@@ -47,9 +47,13 @@ class Optimizer():
         self._update_options(kwargs)
         
         self.func = counting_function_cec2013_single(func)
+        self.n_particles = n_particles
         self.dim = dim
         self.max_iter = max_iter
         self.max_func_evals = max_func_evals
+
+        self._options_checker()
+
         self.Swarm = Swarm(self.func, n_particles, dim, constr, self.options['swarm_options'], 
                            self.options['surrogate_options'])
 
@@ -101,6 +105,11 @@ class Optimizer():
             
             else:
                 raise NameError(f'The key "{key}" does not exist in the dict.')
+
+    def _options_checker(self):
+        if self.options['surrogate_options']['use_surrogate']:
+            if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+                assert self.options['surrogate_options']['m'] <= self.n_particles, 'm must be less than or equal to the number of particles.'
 
     def optimize(self):
         """Main optimization routine.
@@ -217,7 +226,7 @@ class Optimizer():
             elif self.options['surrogate_options']['prediction_mode'] == 'standard':
                 self.Swarm.update(worst_idx=self.worst_idx)
             elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-                self.Swarm.update(worst_indices=self.worst_indices, other_indices=self.other_indices)                
+                self.Swarm.update(worst_indices=self.worst_indices, other_indices=self.other_indices)
 
     def enforce_constraints(self, check_position, check_velocity):
         """Wraps the enforce_constraints method from the swarm."""
@@ -289,7 +298,6 @@ class Optimizer():
         axs[1].plot(x, mean_pbest, color='tab:blue')
         axs[1].fill_between(x, mean_pbest - np.sqrt(var_pbest), mean_pbest + np.sqrt(var_pbest),
                             color='tab:blue', alpha=0.2)
-        
 
         axs[1].set_ylabel('mean +- std pbest fval')
         axs[1].set_xlabel('function evaluations')
