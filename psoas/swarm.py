@@ -112,7 +112,7 @@ class Swarm():
         else:
             raise ValueError(f"Expected global, ring or adaptive random for the topology. Got {self.options['topology']}")
 
-    def update(self, current_prediction=None, worst_idx=None, worst_indices=None, other_indices=None):
+    def update(self, current_proposition=None, worst_idx=None, worst_indices=None, other_indices=None):
         """Performs one iterative update step for the Swarm.
         
         The velocity update for the swarm is calculated here and the positions of all 
@@ -121,48 +121,48 @@ class Swarm():
         it. Lastly, the personal best point for each particle is updated, if the function 
         value at the new location is better than the previous personal best position. 
         
-        For certain surrogate prediction modes, the proposed points are saved within the
+        For certain surrogate proposition modes, the proposed points are saved within the
         swarm but were not used yet (used in the fit of the surrogate or compared to the 
         personal bests of the particles). These points are held in place by setting the 
         respective velocities to zero and reinitializing the velocities after the update 
-        of the positions. In the case of the standard_m prediction mode, the function values
+        of the positions. In the case of the standard_m proposition mode, the function values
         are already updated and their calculation can therefore be skipped in this update step.
 
         Args:
-            current_prediction: The last point that was proposed by the surrogate (Only 
-                necessary for surrogate prediction modes center_of_gravity and 
+            current_proposition: The last point that was proposed by the surrogate (Only 
+                necessary for surrogate proposition modes center_of_gravity and 
                 shifting_center)
             worst_idx: The particle index at which a proposed point is stored (Only for
-                standard surrogate prediction mode)
+                standard surrogate proposition mode)
             worst_indices: The particle indices at which proposed points are stored
-                (Only for standard_m surrogate prediction mode)
+                (Only for standard_m surrogate proposition mode)
             other_indices: The particle indices that complement worst_indices (Only for
-                standard_m surrogate prediction mode)
+                standard_m surrogate proposition mode)
         """
-        self.compute_velocity(current_prediction)
+        self.compute_velocity(current_proposition)
         self.enforce_constraints(check_position=False, check_velocity=True)
 
         if self.surrogate_options['use_surrogate']:
             # ensures that the points proposed by the surrogate do not move
-            if self.surrogate_options['prediction_mode'] == 'standard':
+            if self.surrogate_options['proposition_mode'] == 'standard':
                 self.velocities[worst_idx] = 0
-            elif self.surrogate_options['prediction_mode'] == 'standard_m':
+            elif self.surrogate_options['proposition_mode'] == 'standard_m':
                 self.velocities[worst_indices] = 0
 
         self.positions = self.positions + self.velocities
 
         if self.surrogate_options['use_surrogate']:
             # reinitializes the velocity for the proposed points
-            if self.surrogate_options['prediction_mode'] == 'standard':
+            if self.surrogate_options['proposition_mode'] == 'standard':
                 self.velocities[worst_idx] = np.random.normal(size=(1, self.dim))
-            elif self.surrogate_options['prediction_mode'] == 'standard_m':
+            elif self.surrogate_options['proposition_mode'] == 'standard_m':
                 m = self.surrogate_options['m']
                 self.velocities[worst_indices] = np.random.normal(size=(m, self.dim))
 
         self.enforce_constraints(check_position=True, check_velocity=False)
 
         if (self.surrogate_options['use_surrogate'] and 
-            self.surrogate_options['prediction_mode'] == 'standard_m'
+            self.surrogate_options['proposition_mode'] == 'standard_m'
            ):
             self.f_values[other_indices] = self.func(self.positions[other_indices])
         else:
@@ -174,7 +174,7 @@ class Swarm():
         self.pbest[bool_decider] = self.f_values[bool_decider]
         self.pbest_positions[bool_decider, :] = self.positions[bool_decider, :]
 
-    def compute_velocity(self, current_prediction):
+    def compute_velocity(self, current_proposition):
         """Wrapper for the different velocity updates.
 
         Depending on the choice in the options one of the velocity updates is performed.
@@ -182,11 +182,11 @@ class Swarm():
         than the MSPSO2011.
 
         Args:
-            current_prediction: The last point that was proposed by the surrogate (Only 
-                for surrogate prediction modes center_of_gravity and shifting_center)
+            current_proposition: The last point that was proposed by the surrogate (Only 
+                for surrogate proposition modes center_of_gravity and shifting_center)
         """
         if self.swarm_options['mode'] == 'SPSO2011':
-            self._velocity_update_SPSO2011(current_prediction)
+            self._velocity_update_SPSO2011(current_proposition)
 
         elif self.swarm_options['mode'] == 'MSPSO2011':
             self._velocity_update_MSPSO2011()
@@ -221,18 +221,18 @@ class Swarm():
         if check_velocity:
             self.velocities = np.clip(self.velocities, self.constr[:, 0], self.constr[:, 1])
 
-    def _velocity_update_SPSO2011(self, current_prediction):
+    def _velocity_update_SPSO2011(self, current_proposition):
         """Calculates a new velocity for each of the particles using the SPSPO2011 update rule.
 
         This implementation of the velocity update is based on the Standard Particle Swarm 
         Optimization 2011 (SPSO2011) as presented in the paper ZambranoBigiarini2013 
         (doi: 10.1109/CEC.2013.6557848). The update is slightly modified for shifting_center
-        and center_of_gravity surrogate prediction approaches. The documentation on gitlab
+        and center_of_gravity surrogate proposition approaches. The documentation on gitlab
         should be consulted for further details on the modified update rules.
 
         Args:
-            current_prediction: The last point that was proposed by the surrogate (Only 
-                for surrogate prediction modes center_of_gravity and shifting_center)
+            current_proposition: The last point that was proposed by the surrogate (Only 
+                for surrogate proposition modes center_of_gravity and shifting_center)
         """
         lbest, lbest_positions = self.compute_lbest()
         
@@ -244,23 +244,23 @@ class Swarm():
 
         # modified center calculation for the center_of_gravity approach
         if (self.surrogate_options['use_surrogate'] and 
-            self.surrogate_options['prediction_mode'] == 'center_of_gravity' and
-            current_prediction is not None
+            self.surrogate_options['proposition_mode'] == 'center_of_gravity' and
+            current_proposition is not None
            ):
             c_3 = 0.75
             U_3 = np.random.uniform(size=(self.n_particles, self.dim))
-            proj_pred = self.positions + c_3 * U_3 * (current_prediction - self.positions)
+            proj_pred = self.positions + c_3 * U_3 * (current_proposition - self.positions)
 
             center = (self.positions + proj_pbest + proj_lbest + proj_pred) / 4
 
         # modified center calculation for the shifting_center approach
         elif (self.surrogate_options['use_surrogate'] and 
-              self.surrogate_options['prediction_mode'] == 'shifting_center' and 
-              current_prediction is not None
+              self.surrogate_options['proposition_mode'] == 'shifting_center' and 
+              current_proposition is not None
              ):
             prio = self.surrogate_options['prioritization']
             center_standard = (self.positions + proj_pbest + proj_lbest) / 3
-            center = center_standard + prio * (current_prediction - center_standard)
+            center = center_standard + prio * (current_proposition - center_standard)
 
         # standard SPSO2011 center calculation
         else:

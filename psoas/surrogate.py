@@ -136,7 +136,7 @@ class Surrogate():
             self.fit_model(positions, f_values)
             self.update_data(positions, f_values, True, mean, std)
 
-    def get_prediction_point(self, constr):
+    def get_proposition_point(self, constr):
         """
         Searches the minimum of the surrogate based on the constraints of the search space.
 
@@ -144,7 +144,7 @@ class Surrogate():
             constr: Constraints of the search space with shape (???)
 
         Returns:
-            prediction: prediction optimum with shape (1, dim)
+            proposition: proposition optimum with shape (1, dim)
         """
         mixed_domain = []
         for c in constr:
@@ -161,10 +161,10 @@ class Surrogate():
         elif self.surrogate_options['surrogate_type'] == 'GP_MCMC':
             acquisition = GPyOpt.acquisitions.AcquisitionEI_MCMC(self.sm, space, acquisition_optimizer)
 
-        pos_prediction, f_val_prediction = acquisition.optimize()
-        return pos_prediction, f_val_prediction
+        pos_proposition, f_val_proposition = acquisition.optimize()
+        return pos_proposition, f_val_proposition
 
-    def use_standard_m_prediction(self, Swarm):
+    def use_standard_m_proposition(self, Swarm):
         """Applies the standard m algortihm which iteratively predicts m candidates using
         the surrogate and replaces the worst m swarm elements with these points.
         """
@@ -173,27 +173,27 @@ class Surrogate():
         worst_indices = np.argsort(Swarm.pbest)[-m:][::-1]
         other_indices = np.argsort(Swarm.pbest)[:-m][::-1]
 
-        m_prediction_points = []
-        m_prediction_values = []
+        m_proposition_points = []
+        m_proposition_values = []
 
         for i in range(m):
 
-            position_prediction, f_val_prediction = self.get_prediction_point(Swarm.constr)
-            prediction_point = position_prediction[0]
+            position_proposition, f_val_proposition = self.get_proposition_point(Swarm.constr)
+            proposition_point = position_proposition[0]
 
-            f_val = Swarm.func(prediction_point[None,:])
+            f_val = Swarm.func(proposition_point[None,:])
 
-            m_prediction_points.append(prediction_point)
-            m_prediction_values.append(f_val)
+            m_proposition_points.append(proposition_point)
+            m_proposition_values.append(f_val)
 
-            Swarm.positions[worst_indices[i]] = prediction_point
+            Swarm.positions[worst_indices[i]] = proposition_point
             Swarm.f_values[worst_indices[i]] = f_val
             
             if self.surrogate_options['use_buffer']:
                 input_positions, input_f_vals = self.surrogate_memory.fetch()
 
-                tmp_positions = np.vstack((input_positions, m_prediction_points))
-                tmp_f_vals = np.vstack((input_f_vals, m_prediction_values))
+                tmp_positions = np.vstack((input_positions, m_proposition_points))
+                tmp_f_vals = np.vstack((input_f_vals, m_proposition_values))
 
                 tmp_positions, idx = np.unique(tmp_positions, return_index=True, axis=0)
                 tmp_f_vals = tmp_f_vals[idx]

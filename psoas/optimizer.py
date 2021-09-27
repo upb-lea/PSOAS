@@ -38,15 +38,15 @@ class Optimizer():
         SurrogateModel: a surrogate instance which is used in the PSO, refer to the 
             documentation of this class for further information (Only if the use_surrogate
             option is set to be True) 
-        current_prediction: The last point that was proposed by the surrogate (Only 
-            necessary for surrogate prediction modes center_of_gravity and 
+        current_proposition: The last point that was proposed by the surrogate (Only 
+            necessary for surrogate proposition modes center_of_gravity and 
             shifting_center)
         worst_idx: The particle index at which a proposed point is stored (Only for
-            standard surrogate prediction mode)
+            standard surrogate proposition mode)
         worst_indices: The particle indices at which proposed points are stored
-            (Only for standard_m surrogate prediction mode)
+            (Only for standard_m surrogate proposition mode)
         other_indices: The particle indices that complement worst_indices (Only for
-            standard_m surrogate prediction mode)
+            standard_m surrogate proposition mode)
     """
 
     def __init__(self, func, n_particles, dim, constr, max_iter, max_func_evals=None, **kwargs):
@@ -108,7 +108,7 @@ class Optimizer():
                                                  '3d_plot': False,
                                                  'interval': 1,
                                                  'm': 5,
-                                                 'prediction_mode': 'standard',
+                                                 'proposition_mode': 'standard',
                                                  'prioritization': 0.2}
                            }
         return default_options
@@ -132,7 +132,7 @@ class Optimizer():
 
     def _options_checker(self):
         if self.options['surrogate_options']['use_surrogate']:
-            if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+            if self.options['surrogate_options']['proposition_mode'] == 'standard_m':
                 assert self.options['surrogate_options']['m'] <= self.n_particles, 'm must be less than or equal to the number of particles.'
 
     def optimize(self):
@@ -171,7 +171,7 @@ class Optimizer():
                 if self.options['surrogate_options']['3d_plot']:
                     self.SurrogateModel.plotter_3d()
 
-                self.use_surrogate_prediction()
+                self.use_surrogate_proposition()
 
             self.update_swarm()
 
@@ -244,36 +244,36 @@ class Optimizer():
         if not self.options['surrogate_options']['use_surrogate']:
             self.Swarm.update()
         else:
-            if (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
-                self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
+            if (self.options['surrogate_options']['proposition_mode'] == 'center_of_gravity' or 
+                self.options['surrogate_options']['proposition_mode'] == 'shifting_center'
             ):
-                self.Swarm.update(self.current_prediction)
-            elif self.options['surrogate_options']['prediction_mode'] == 'standard':
+                self.Swarm.update(self.current_proposition)
+            elif self.options['surrogate_options']['proposition_mode'] == 'standard':
                 self.Swarm.update(worst_idx=self.worst_idx)
-            elif self.options['surrogate_options']['prediction_mode'] == 'standard_m':
+            elif self.options['surrogate_options']['proposition_mode'] == 'standard_m':
                 self.Swarm.update(worst_indices=self.worst_indices, other_indices=self.other_indices)
 
     def enforce_constraints(self, check_position, check_velocity):
         """Wraps the enforce_constraints method from the swarm."""
         self.Swarm.enforce_constraints(check_position, check_velocity)
 
-    def use_surrogate_prediction(self):
+    def use_surrogate_proposition(self):
         """
-        This function handles the different prediction methods.
+        This function handles the different proposition methods.
         """
-        if self.options['surrogate_options']['prediction_mode'] == 'standard':
-            pos_prediction, f_val_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
+        if self.options['surrogate_options']['proposition_mode'] == 'standard':
+            pos_proposition, f_val_proposition = self.SurrogateModel.get_proposition_point(self.Swarm.constr)
             self.worst_idx = np.argmax(self.Swarm.pbest)
-            self.Swarm.positions[self.worst_idx] = pos_prediction
+            self.Swarm.positions[self.worst_idx] = pos_proposition
 
-        if self.options['surrogate_options']['prediction_mode'] == 'standard_m':
-            self.worst_indices, self.other_indices = self.SurrogateModel.use_standard_m_prediction(self.Swarm)
+        if self.options['surrogate_options']['proposition_mode'] == 'standard_m':
+            self.worst_indices, self.other_indices = self.SurrogateModel.use_standard_m_proposition(self.Swarm)
 
-        elif (self.options['surrogate_options']['prediction_mode'] == 'center_of_gravity' or 
-              self.options['surrogate_options']['prediction_mode'] == 'shifting_center'
+        elif (self.options['surrogate_options']['proposition_mode'] == 'center_of_gravity' or 
+              self.options['surrogate_options']['proposition_mode'] == 'shifting_center'
              ):
-            pos_prediction, f_val_prediction = self.SurrogateModel.get_prediction_point(self.Swarm.constr)
-            self.current_prediction = pos_prediction
+            pos_proposition, f_val_proposition = self.SurrogateModel.get_proposition_point(self.Swarm.constr)
+            self.current_proposition = pos_proposition
 
     def check_max_func_evals(self):
         """Returns true if the optimization should be terminated due to too many function evaluations.
