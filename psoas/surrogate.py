@@ -118,7 +118,7 @@ class Surrogate():
         """
         TODO: docsting
         """
-        assert point.shape[1] == (self.dim), f'The dimension of the point does not match with the dimension of the model. Expect dimension {self.dim}, got {point.shape[0]}'
+        assert positions.shape[1] == (self.dim), f'The dimension of the positions does not match with the dimension of the model. Expect dimension {self.dim}, got {positions.shape[1]}'
         predicted_mean, predicted_std = self.sm.predict(positions)
         return predicted_mean, predicted_std
 

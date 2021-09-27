@@ -83,7 +83,7 @@ class EvaluationSingle(Evaluation):
                 counter += 1
                 i = i-1
                 if counter > 200:
-                    raise RuntimeError(f'Tried function {self.func} more than {counter}')
+                    raise RuntimeError(f'Tried more than {counter}')
                 continue
             self.df.loc[i, 'n_iter'] = res['iter']
             self.df.loc[i, 'n_fun_evals'] = res['n_fun_evals']
@@ -97,7 +97,7 @@ class EvaluationSingle(Evaluation):
             if 'diff_opt_value' in self.df.keys():
                 self.df.loc[i, 'diff_opt_value'] = res['func_opt'] - self.opt_value
         if counter > 0:
-            print(f'Repeats for function {self.func} : {counter}')
+            print(f'Repeats for function: {counter}')
         
     def get_statistical_information(self):
         mean_iters = np.mean(self.df['n_iter'])
