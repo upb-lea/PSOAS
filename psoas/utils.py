@@ -5,6 +5,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import imageio
+import shutil
 
 
 def random_hypersphere_draw(r, dim):
@@ -198,6 +199,16 @@ class SwarmPlotter:
                 data_plot['z'][i,j] = func.function(np.array([xx[0][i], yy[j][0]]))
 
         self.data_plot = data_plot
+        
+        # create a temporary dir to store the images
+        _cwd = os.getcwd()
+        self._path = '/tmp_gif'
+        self._tmp_path = _cwd + self._path
+
+        if os.path.isdir(self._tmp_path):
+            shutil.rmtree(self._tmp_path)
+
+        os.mkdir(self._tmp_path)
 
         self._gif_counter = 0
         self._gif_filenames = []
@@ -222,7 +233,7 @@ class SwarmPlotter:
             self._gif_filenames.append(filename)
     
             # save frame
-            plt.savefig(filename)
+            plt.savefig(f'{self._tmp_path}/{filename}')
             plt.close()
             self._gif_counter += 1
         plt.show()
@@ -232,12 +243,13 @@ class SwarmPlotter:
 
         with imageio.get_writer('PSO.gif', mode='I') as writer:
             for filename in self._gif_filenames:
-                image = imageio.imread(filename)
+                image = imageio.imread(f'{self._tmp_path}/{filename}')
                 writer.append_data(image)
 
         print('Gif has been written.')
         
         # Remove files
         for filename in set(self._gif_filenames):
-            os.remove(filename)
+            os.remove(f'{self._tmp_path}/{filename}')
+        os.rmdir(self._tmp_path)
 
