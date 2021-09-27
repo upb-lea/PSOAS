@@ -14,44 +14,61 @@ class Swarm():
     """Swarm class implementation.
 
     Holds all information regarding the swarm used in the PSO. Most notably the current
-    positions and velocities of all particles and the position and function value of the personal 
-    best position of each particle. Moreover it holds functions to compute the estimated 
-    global optimum and a local optimum which depends on the topology.
+    positions, corresponding function values and velocities of all particles and the 
+    positions and function values of the personal best position for each particle. It 
+    contains functions to perform an iterative step and update all of these values.
+    Moreover it contains functions to compute the estimated global optimum in a given 
+    iteration and a local optimum for each particle (which depends on the topology).
+
+    Attributes:
+        swarm_options: Dict containing options that belong to the swarm
+        surrogate_options: Dict containing options that belong to the surrogate
+            (this is necessary for some specific velocity updates)
+        func: The function to be optimized
+        n_particles: The number of particles in the swarm
+        dim: The dimension of the search-space
+        constr: The constraints of the search-space with shape (dim, 2)
+        positions: The positions of the particles in dim-dimensional space with
+            shape (n_particles, dim)
+        f_values: The function values of the particles with shape (n_particles, 1)
+        velocities: The velocities of the particles with shape (n_particles, dim)
+        pbest_positions: The best position so far per particle with shape (n_particles, dim)
+        pbest: The function value of the best position so far with shape (n_particles, 1)
     """
 
     def __init__(self, func, n_particles, dim, constr, swarm_options, surrogate_options):
         """Creates and initializes a swarm class instance.
 
         Args:
-            func: The function whose global optimum is to be determined
-            n_particles: The amount of particles which is used in the swarm
+            func: The function to be optimized
+            n_particles: The number of particles in the swarm
             dim: The dimension of the search-space
             constr: The constraints of the search-space with shape (dim, 2)
             options: Options for the swarm in form of a dict
         """
-        assert constr.shape == (dim, 2), f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape}!"
+        assert constr.shape == (dim, 2), \
+            f"Dimension of the particles ({dim}, 2) does not match the dimension of the constraints {constr.shape}!"
 
         self.swarm_options = swarm_options
-        self.surrogate_options = surrogate_options  # necessary for some specific velocity updates
+        self.surrogate_options = surrogate_options
 
         self.func = func
         self.n_particles = n_particles
         self.dim = dim
         self.constr = constr
-        self.constr_below = np.ones((n_particles, dim)) * constr[:, 0]
-        self.constr_above = np.ones((n_particles, dim)) * constr[:, 1]
-        self.velocity_reset = np.zeros((n_particles, dim))
+        self._constr_below = np.ones((n_particles, dim)) * constr[:, 0]
+        self._constr_above = np.ones((n_particles, dim)) * constr[:, 1]
+        self._velocity_reset = np.zeros((n_particles, dim))
 
         self._calculate_initial_values()        
 
         # preparation for contour plot
-        if swarm_options['3d_plot'] is True:
-            assert dim == 2, f'Got dim {self.dim}. Expected dim = 2.'
+        if self.swarm_options['3d_plot'] is True:
+            assert self.dim == 2, f'Got dim {self.dim}. Expected dim = 2.'
 
-            self.data_plot = {}
-            self.data_plot = self.get_contour(self.data_plot)
-            self.gif_counter = 0
-            self.gif_filenames = []
+            self._data_plot = self._get_contour()
+            self._gif_counter = 0
+            self._gif_filenames = []
 
     def _calculate_initial_values(self):
         """Calculates the initial values for the position using Latin Hypercube Sampling of each
@@ -148,17 +165,17 @@ class Swarm():
             bool_below = self.positions < self.constr[:, 0]
             bool_above = self.positions > self.constr[:, 1]
 
-            self.positions[bool_below] = self.constr_below[bool_below]
-            self.positions[bool_above] = self.constr_above[bool_above]
-            self.velocities[bool_below] = self.velocity_reset[bool_below]
-            self.velocities[bool_above] = self.velocity_reset[bool_above]
+            self.positions[bool_below] = self._constr_below[bool_below]
+            self.positions[bool_above] = self._constr_above[bool_above]
+            self.velocities[bool_below] = self._velocity_reset[bool_below]
+            self.velocities[bool_above] = self._velocity_reset[bool_above]
 
         if check_velocity:
             bool_below = self.velocities < self.constr[:, 0]
             bool_above = self.velocities > self.constr[:, 1]
 
-            self.velocities[bool_below] = self.constr_below[bool_below]
-            self.velocities[bool_above] = self.constr_above[bool_above]
+            self.velocities[bool_below] = self._constr_below[bool_below]
+            self.velocities[bool_above] = self._constr_above[bool_above]
 
     def _velocity_update_SPSO2011(self, current_prediction):
         """
@@ -303,7 +320,7 @@ class Swarm():
         best_indices = np.argmin(informed_particles, axis=1)
         return self.pbest[best_indices], self.pbest_positions[best_indices]
 
-    def get_contour(self, data_plot):
+    def _get_contour(self):
         """
         Generates data for plotting the current function.
 
@@ -313,6 +330,7 @@ class Swarm():
         Returns:
             Returns the input dict with three keys: x, y and z
         """
+        data_plot = {}
         delta = 0.1
         B = np.arange(-100, 100, delta)
         data_plot['x'] = B
@@ -326,13 +344,14 @@ class Swarm():
                 data_plot['z'][i,j] = self.func.function(np.array([xx[0][i], yy[j][0]]))
         return data_plot
 
-    def plotter(self):
+    def _plotter(self):
         """
         Plotting the current function.
         """
-        plt.plot(self.positions[:,0], self.positions[:,1], 'o')
-        plt.contourf(self.data_plot['x'], self.data_plot['y'], self.data_plot['z'])
-        plt.quiver(self.positions[:,0], self.positions[:,1], self.velocities[:,0], self.velocities[:,1], units='xy', scale_units='xy', scale=1)
+        plt.plot(self.positions[:, 0], self.positions[:, 1], 'o')
+        plt.contourf(self._data_plot['x'], self._data_plot['y'], self._data_plot['z'])
+        plt.quiver(self.positions[:, 0], self.positions[:, 1], self.velocities[:, 0], self.velocities[:, 1], 
+                   units='xy', scale_units='xy', scale=1)
 
         plt.xlim((-100, 100))
         plt.ylim((-100, 100))
@@ -341,26 +360,26 @@ class Swarm():
         plt.ylabel("y")
 
         if self.swarm_options['create_gif']:
-            filename = f'{self.gif_counter}.png'
-            self.gif_filenames.append(filename)
+            filename = f'{self._gif_counter}.png'
+            self._gif_filenames.append(filename)
     
             # save frame
             plt.savefig(filename)
             plt.close()
-            self.gif_counter += 1
+            self._gif_counter += 1
         plt.show()
     
-    def create_gif(self):
+    def _create_gif(self):
         """
         Create a gif of the particles moving through the cost landscape.
         """
         with imageio.get_writer('PSO.gif', mode='I') as writer:
-            for filename in self.gif_filenames:
+            for filename in self._gif_filenames:
                 image = imageio.imread(filename)
                 writer.append_data(image)
 
         print('Gif has been written.')
         
         # Remove files
-        for filename in set(self.gif_filenames):
+        for filename in set(self._gif_filenames):
             os.remove(filename)
