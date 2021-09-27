@@ -1,4 +1,4 @@
-"""Collection of basic utillity functions."""
+"""Collection of basic utility functions."""
 
 import numpy as np
 
@@ -8,7 +8,7 @@ def random_hypersphere_draw(r, dim):
 
     The goal is to sample a dim-dimensional array for each particle. One sample is
     drawn uniformly from a hypersphere where the radius corresponds to one element of r.
-    The exact explanation can be found in the paper Völker2017
+    The exact explanation can be found in the paper Voelker2017
     (doi: 10.13140/RG.2.2.15829.01767/1).
 
     Args:
@@ -29,7 +29,7 @@ def random_hypersphere_draw(r, dim):
 def calc_max_iter(max_f_eval, n_particles):
     """Calculate the maximum interations.
 
-    For some applications, a fixed bugdet of functions evaluations must
+    For some applications, a fixed budget of functions evaluations must
     be considered. This function calculates the maximum possible iterations
     given the budget and the number of particles.
     

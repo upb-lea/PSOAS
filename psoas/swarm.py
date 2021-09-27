@@ -101,8 +101,7 @@ class Swarm():
         return gbest, gbest_position
 
     def compute_lbest(self):
-        """
-        Returns the local optimum for each particle depending on the topology
+        """Returns the local optimum for each particle depending on the topology
         specified in the options. 
         """
         if self.swarm_options['topology'] == 'global':
@@ -135,8 +134,8 @@ class Swarm():
 
         Args:
             current_prediction: The last point that was proposed by the surrogate (Only 
-                necessary for surrogate prediction modes center_of_gravity and shifting 
-                center)
+                necessary for surrogate prediction modes center_of_gravity and 
+                shifting_center)
             worst_idx: The particle index at which a proposed point is stored (Only for
                 standard surrogate prediction mode)
             worst_indices: The particle indices at which proposed points are stored
@@ -207,13 +206,17 @@ class Swarm():
             self.velocities = np.clip(self.velocities, self.constr[:, 0], self.constr[:, 1])
 
     def _velocity_update_SPSO2011(self, current_prediction):
-        """
+        """Calculates a new velocity for each of the particles using the SPSPO2011 update rule.
+
         This implementation of the velocity update is based on the Standard Particle Swarm 
         Optimization 2011 (SPSO2011) as presented in the paper ZambranoBigiarini2013 
-        (doi: 10.1109/CEC.2013.6557848).
-        
-        current_prediction: The last point that was proposed by the surrogate (Only 
-            for surrogate prediction modes center_of_gravity and shifting center)
+        (doi: 10.1109/CEC.2013.6557848). The update is slightly modified for shifting_center
+        and center_of_gravity surrogate prediction approaches. The documentation on gitlab
+        should be consulted for further details on the modified update rules.
+
+        Args:
+            current_prediction: The last point that was proposed by the surrogate (Only 
+                for surrogate prediction modes center_of_gravity and shifting_center)
         """
         lbest, lbest_positions = self.compute_lbest()
         
@@ -223,6 +226,7 @@ class Swarm():
         proj_pbest = self.positions + c_1 * U_1 * (self.pbest_positions - self.positions)
         proj_lbest = self.positions + c_2 * U_2 * (lbest_positions - self.positions) 
 
+        # modified center calculation for the center_of_gravity approach
         if (self.surrogate_options['use_surrogate'] and 
             self.surrogate_options['prediction_mode'] == 'center_of_gravity' and
             current_prediction is not None
@@ -233,6 +237,7 @@ class Swarm():
 
             center = (self.positions + proj_pbest + proj_lbest + proj_pred) / 4
 
+        # modified center calculation for the shifting_center approach
         elif (self.surrogate_options['use_surrogate'] and 
               self.surrogate_options['prediction_mode'] == 'shifting_center' and 
               current_prediction is not None
@@ -241,6 +246,7 @@ class Swarm():
             center_standard = (self.positions + proj_pbest + proj_lbest) / 3
             center = center_standard + prio * (current_prediction - center_standard)
 
+        # standard SPSO2011 center calculation
         else:
             center = (self.positions + proj_pbest + proj_lbest) / 3           
 
@@ -251,9 +257,10 @@ class Swarm():
         self.velocities = omega * self.velocities + sample_points - self.positions
 
     def _velocity_update_MSPSO2011(self):
-        """
+        """Calculates a new velocity for each of the particles using the MSPSPO2011 update rule.
+
         This implementation of the velocity update is based on the paper Hariya2016, 
-        which in itself based on the SPSO2011.
+        which in itself based on the SPSO2011 (doi: 10.1109/CEC.2016.7744012).
         """
         lbest, lbest_positions = self.compute_lbest()
 
@@ -278,8 +285,15 @@ class Swarm():
         self.velocities = omega * self.velocities + sample_points - self.positions
 
     def compute_velocity(self, current_prediction):
-        """
-        TODO: docstring
+        """Wrapper for the different velocity updates.
+
+        Depending on the choice in the options one of the velocity updates is performed.
+        Generally, it is adviseable to use the SPSO2011 since it usually performs better 
+        than the MSPSO2011.
+
+        Args:
+            current_prediction: The last point that was proposed by the surrogate (Only 
+                for surrogate prediction modes center_of_gravity and shifting_center)
         """
         if self.swarm_options['mode'] == 'SPSO2011':
             self._velocity_update_SPSO2011(current_prediction)
@@ -288,20 +302,24 @@ class Swarm():
             self._velocity_update_MSPSO2011()
 
         else:
-            
-            raise NotImplementedError()
+            raise ValueError(f"Expected SPSO2011 or MSPSO2011 for the swarm mode. Got {self.options['mode']}")
 
     def _topology_global(self):
-        """
-        Implements a global exchange of the personal bests between the particles.
+        """Implements the global exchange of the personal bests between the particles.
+
+        With this topology the global optimum of the whole swarm is directly known by
+        any particle in the swarm.
         """
         gbest, gbest_position = self.compute_gbest()
         ones = np.ones(self.n_particles)
         return gbest * ones, ones[:, None] @ gbest_position[None, :]
 
     def _topology_ring(self):
-        """
-        Implements a exchange of personal bests according to a ringtopology.
+        """Implements the exchange of personal bests according to a ring topology.
+
+        With this topology the personal optima found by any of the particles are shared 
+        with two other particles of the swarm whose indices are one above and one below
+        the particle.
         """
         neighbors = np.zeros([self.n_particles, 3])
         neighbors[0, 0] = self.pbest[-1]
@@ -322,13 +340,15 @@ class Swarm():
 
         return lbest, lbest_positions
 
-    def _topology_adaptive_random(self):
-        """
-        Implements a exchange of personal bests in a random fashion.
-        """
-        n_neighbors = 3
+    def _topology_adaptive_random(self, n_neighbors=3):
+        """Implements the exchange of personal bests with changing random partners.
 
-        # the assignments are changed if there is no change in the global best
+        A set of neighbors is assigned to each particle and the particle informs its
+        neighbors with its personal optimum. The assignment is made once in the 
+        beginning and is then changed whenever the global optimum shows no improvement 
+        from one iteration to the next. Take a look at the paper ZambranoBigiarini2013 
+        (doi: 10.1109/CEC.2013.6557848) for another description.
+        """
         update_neighbors = self.no_change_in_gbest
 
         if (not hasattr(self, 'neighbors')) or update_neighbors:
@@ -345,15 +365,16 @@ class Swarm():
         best_indices = np.argmin(informed_particles, axis=1)
         return self.pbest[best_indices], self.pbest_positions[best_indices]
 
-    def _get_contour(self):
-        """
-        Generates data for plotting the current function.
+    # plotting ##########################################################################
 
-        Args:
-            data_plot: Dict to store the data necessary for plotting
-        
+    def _get_contour(self):
+        """Generates contours for the current function which are used to create a plot 
+        and possibly a gif of the swarm moving over the function (Only usable for 
+        dimension=2).
+
         Returns:
-            Returns the input dict with three keys: x, y and z
+            Returns a dict containing the function values at key 'z' and the x and y
+                values at keys 'x' and 'y' respectively
         """
         data_plot = {}
         delta = 0.1
@@ -370,8 +391,8 @@ class Swarm():
         return data_plot
 
     def _plotter(self):
-        """
-        Plotting the current function.
+        """Creates a contour plot of the current function while showing the position and
+        velocity of all particles.
         """
         plt.plot(self.positions[:, 0], self.positions[:, 1], 'o')
         plt.contourf(self._data_plot['x'], self._data_plot['y'], self._data_plot['z'])
@@ -395,9 +416,8 @@ class Swarm():
         plt.show()
     
     def _create_gif(self):
-        """
-        Create a gif of the particles moving through the cost landscape.
-        """
+        """Create a gif of the particles moving through the contour plot."""
+
         with imageio.get_writer('PSO.gif', mode='I') as writer:
             for filename in self._gif_filenames:
                 image = imageio.imread(filename)
