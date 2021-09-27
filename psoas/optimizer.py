@@ -3,7 +3,7 @@ Implementation of the optimizer class for the Particle Swarm Optimization. This 
 optimizer and manager for the swarm, surrogates and databases.
 
 Typical usage example:
-    opt = Optimizer(func, n_particles, dimension, constraints)
+    opt = Optimizer(func, n_particles, dimension, constraints, max_iter)
     result = opt.optimize()
 """
 import numpy as np
@@ -74,7 +74,7 @@ class Optimizer():
                            'do_plots': False,
                            'swarm_options': {'mode': 'SPSO2011', 
                                              'topology': 'global',
-                                             '3d_plot': False,
+                                             'contour_plot': False,
                                              'create_gif': False},
                            'surrogate_options': {'surrogate_type': 'GP',
                                                  'use_surrogate': True,
@@ -169,8 +169,9 @@ class Optimizer():
                 results['var_pbest_list'].append(np.var(self.Swarm.pbest))
                 results["n_fun_eval_list"].append(self.func.eval_count)
 
-            if self.options['swarm_options']['3d_plot']:
-                self.Swarm._plotter()
+            if self.options['swarm_options']['contour_plot']:
+                self.Swarm.swarm_plotter.plot(self.Swarm.positions, self.Swarm.velocities, 
+                                              self.Swarm.swarm_options['create_gif'])
 
             if self.options['verbose']:
                 self.print_iteration_information(i, gbest)
@@ -196,8 +197,8 @@ class Optimizer():
         if self.options['do_plots']:
             self.plot_results(results)
 
-        if self.options['swarm_options']['create_gif']:
-            self.Swarm._create_gif()
+        if self.options['swarm_options']['contour_plot'] and self.options['swarm_options']['create_gif']:
+            self.Swarm.swarm_plotter.create_gif()
         
         results['mean_pbest'] = np.mean(self.Swarm.pbest)
         results['var_pbest'] = np.var(self.Swarm.pbest)

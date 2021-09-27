@@ -1,13 +1,9 @@
 """Implementation of the Swarm class for the Particle Swarm Optimization (PSO)."""
 
-import os
-
 import numpy as np
 from smt.sampling_methods import LHS
-import matplotlib.pyplot as plt
-import imageio
 
-from psoas.utils import random_hypersphere_draw
+from psoas.utils import random_hypersphere_draw, SwarmPlotter
 
 
 class Swarm():
@@ -67,12 +63,10 @@ class Swarm():
         self._calculate_initial_values()        
 
         # preparation for contour plot
-        if self.swarm_options['3d_plot'] is True:
+        if self.swarm_options['contour_plot'] is True:
             assert self.dim == 2, f'Got dim {self.dim}. Expected dim = 2.'
 
-            self._data_plot = self._get_contour()
-            self._gif_counter = 0
-            self._gif_filenames = []
+            self.swarm_plotter = SwarmPlotter(self.func)
 
     def _calculate_initial_values(self):
         """Calculates initial values for positions, function values and velocities.
@@ -178,6 +172,26 @@ class Swarm():
         self.pbest[bool_decider] = self.f_values[bool_decider]
         self.pbest_positions[bool_decider, :] = self.positions[bool_decider, :]
 
+    def compute_velocity(self, current_prediction):
+        """Wrapper for the different velocity updates.
+
+        Depending on the choice in the options one of the velocity updates is performed.
+        Generally, it is adviseable to use the SPSO2011 since it usually performs better 
+        than the MSPSO2011.
+
+        Args:
+            current_prediction: The last point that was proposed by the surrogate (Only 
+                for surrogate prediction modes center_of_gravity and shifting_center)
+        """
+        if self.swarm_options['mode'] == 'SPSO2011':
+            self._velocity_update_SPSO2011(current_prediction)
+
+        elif self.swarm_options['mode'] == 'MSPSO2011':
+            self._velocity_update_MSPSO2011()
+
+        else:
+            raise ValueError(f"Expected SPSO2011 or MSPSO2011 for the swarm mode. Got {self.options['mode']}")
+
     def enforce_constraints(self, check_position, check_velocity):
         """Enforces the constraints of the valid search space.
 
@@ -265,44 +279,18 @@ class Swarm():
         lbest, lbest_positions = self.compute_lbest()
 
         c_1, c_2 = np.ones(2) * 0.5 + np.log(2)
-        omega = 1 / (2*np.log(2))
-
         comp_identity = 2*np.ones((self.n_particles, self.dim))
-
         U_1 = np.random.uniform(size=(self.n_particles, self.dim))
-
         proj_pbest = self.positions + c_1 * 2 * U_1 * (self.pbest_positions - self.positions)
         proj_lbest = self.positions + c_2 * (comp_identity - 2 * U_1) * (lbest_positions - self.positions)
 
         center = (self.positions + proj_pbest + proj_lbest) / 3
 
         r = np.linalg.norm(center - self.positions, axis=1)
-
         offset = random_hypersphere_draw(r, self.dim)
-
         sample_points = center + offset
-        
+        omega = 1 / (2*np.log(2))
         self.velocities = omega * self.velocities + sample_points - self.positions
-
-    def compute_velocity(self, current_prediction):
-        """Wrapper for the different velocity updates.
-
-        Depending on the choice in the options one of the velocity updates is performed.
-        Generally, it is adviseable to use the SPSO2011 since it usually performs better 
-        than the MSPSO2011.
-
-        Args:
-            current_prediction: The last point that was proposed by the surrogate (Only 
-                for surrogate prediction modes center_of_gravity and shifting_center)
-        """
-        if self.swarm_options['mode'] == 'SPSO2011':
-            self._velocity_update_SPSO2011(current_prediction)
-
-        elif self.swarm_options['mode'] == 'MSPSO2011':
-            self._velocity_update_MSPSO2011()
-
-        else:
-            raise ValueError(f"Expected SPSO2011 or MSPSO2011 for the swarm mode. Got {self.options['mode']}")
 
     def _topology_global(self):
         """Implements the global exchange of the personal bests between the particles.
@@ -364,67 +352,3 @@ class Swarm():
 
         best_indices = np.argmin(informed_particles, axis=1)
         return self.pbest[best_indices], self.pbest_positions[best_indices]
-
-    # plotting ##########################################################################
-
-    def _get_contour(self):
-        """Generates contours for the current function which are used to create a plot 
-        and possibly a gif of the swarm moving over the function (Only usable for 
-        dimension=2).
-
-        Returns:
-            Returns a dict containing the function values at key 'z' and the x and y
-                values at keys 'x' and 'y' respectively
-        """
-        data_plot = {}
-        delta = 0.1
-        B = np.arange(-100, 100, delta)
-        data_plot['x'] = B
-        data_plot['y'] = B
-
-        xx, yy = np.meshgrid(B,B, sparse=True)
-        data_plot['z'] = np.zeros((xx.shape[1], yy.shape[0]))
-
-        for i in range(xx.shape[1]):
-            for j in range(yy.shape[0]):
-                data_plot['z'][i,j] = self.func.function(np.array([xx[0][i], yy[j][0]]))
-        return data_plot
-
-    def _plotter(self):
-        """Creates a contour plot of the current function while showing the position and
-        velocity of all particles.
-        """
-        plt.plot(self.positions[:, 0], self.positions[:, 1], 'o')
-        plt.contourf(self._data_plot['x'], self._data_plot['y'], self._data_plot['z'])
-        plt.quiver(self.positions[:, 0], self.positions[:, 1], self.velocities[:, 0], self.velocities[:, 1], 
-                   units='xy', scale_units='xy', scale=1)
-
-        plt.xlim((-100, 100))
-        plt.ylim((-100, 100))
-
-        plt.xlabel("x")
-        plt.ylabel("y")
-
-        if self.swarm_options['create_gif']:
-            filename = f'{self._gif_counter}.png'
-            self._gif_filenames.append(filename)
-    
-            # save frame
-            plt.savefig(filename)
-            plt.close()
-            self._gif_counter += 1
-        plt.show()
-    
-    def _create_gif(self):
-        """Create a gif of the particles moving through the contour plot."""
-
-        with imageio.get_writer('PSO.gif', mode='I') as writer:
-            for filename in self._gif_filenames:
-                image = imageio.imread(filename)
-                writer.append_data(image)
-
-        print('Gif has been written.')
-        
-        # Remove files
-        for filename in set(self._gif_filenames):
-            os.remove(filename)
