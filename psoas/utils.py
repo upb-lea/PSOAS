@@ -1,3 +1,5 @@
+"""Collection of basic utillity functions."""
+
 import numpy as np
 
 
@@ -64,27 +66,64 @@ class counting_function_cec2013_single(counting_function):
 
 
 class TimeDataBuffer:
+    """Implementation of the time data buffer.
+
+    This class implements a ringbuffer that works according to the first in, first out
+    (FIFO) principle. The positions and associated function values are stored for each
+    iteration, where the number of iterations can be set.
+
+    Attributes:
+        position_buffer: Array of shape ((n_slots * n_particles), dim) containing the
+            positions of the last n_slots-iterations
+        f_val_buffer: Array of shape ((n_slots * n_particles, 1) containing the function
+            values of the last n_slots-iterations
+
+    """
     def __init__(self, dim, n_particles, n_slots=4):
+        """Creates and initializes a time data buffer class instance.
+        
+        Args:
+            dim: The dimension of the search-space
+            n_particles: The number of particles used in the swarm
+            n_slots: The number of slots used for storage
+        """
+
         self.position_buffer = np.zeros((n_slots * n_particles, dim), dtype=np.float32)
         self.f_val_buffer = np.zeros((n_slots * n_particles, 1), dtype=np.float32)
-        self.ptr = 0
-        self.size = 0
-        self.max_size = n_slots
-        self.n_particles = n_particles
+        self._ptr = 0
+        self._size = 0
+        self._max_size = n_slots
+        self._n_particles = n_particles
     
     def store(self, positions, f_vals):
-        start = self.ptr * self.n_particles
-        end = (self.ptr+1) * self.n_particles
+        """Store the positions and corresponding function values.
+
+        Args:
+            positions: The positions of the particles in dim-dimensional space with
+            shape (n_particles, dim)
+            f_vals: The function values of the particles with shape (n_particles, 1)
+        """
+        start = self._ptr * self._n_particles
+        end = (self._ptr+1) * self._n_particles
 
         self.position_buffer[start:end] = positions.copy()
         self.f_val_buffer[start:end] = f_vals.copy()
 
-        self.ptr = (self.ptr + 1) % self.max_size
-        self.size = min(self.size + 1, self.max_size)
+        self._ptr = (self._ptr + 1) % self._max_size
+        self._size = min(self._size + 1, self._max_size)
     
     def fetch(self):
-        positions = self.position_buffer[:self.size*self.n_particles]
-        f_vals = self.f_val_buffer[:self.size*self.n_particles]
+        """Fetch the positions and corresponding function values.
+
+        Returns:
+            postions: Array of shape ((n_slots * n_particles), dim) containing the
+                positions of the buffer
+            f_vals: Array of shape ((n_slots * n_particles), 1) containing the
+                function values of the buffer
+
+        """
+        positions = self.position_buffer[:self._size*self._n_particles]
+        f_vals = self.f_val_buffer[:self._size*self._n_particles]
         return positions, f_vals
 
 
