@@ -1,6 +1,4 @@
-"""
-Implementation of the evaluation framework for the Particle Swarm Optimizer. 
-"""
+"""Implementation of the evaluation framework for the Particle Swarm Optimizer. """
 
 import numpy as np
 import pandas as pd

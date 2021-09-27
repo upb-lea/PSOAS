@@ -30,6 +30,8 @@ class Swarm():
         velocities: The velocities of the particles with shape (n_particles, dim)
         pbest_positions: The best position so far per particle with shape (n_particles, dim)
         pbest: The function value of the best position so far with shape (n_particles, 1)
+        no_change_in_gbest: A boolean which shows if there was a change in the global best
+            between the last and the current iteration  
     """
 
     def __init__(self, func, n_particles, dim, constr, swarm_options, surrogate_options):

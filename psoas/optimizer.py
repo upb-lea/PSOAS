@@ -1,6 +1,5 @@
-"""
-Implementation of the optimizer class for the Particle Swarm Optimization. This class functions as the
-optimizer and manager for the swarm, surrogates and databases.
+"""Implementation of the optimizer class for the Particle Swarm Optimization. This class functions as the
+optimizer and manager for the swarm and surrogate.
 
 Typical usage example:
     opt = Optimizer(func, n_particles, dimension, constraints, max_iter)
@@ -20,29 +19,54 @@ from psoas.surrogate import Surrogate
 class Optimizer():
     """Optimizer class implementation.
 
-    This class manages and updates the Swarm instance and any instances of surrogates and databases.
-    It is designed to be used from the outside of the package to find the global optimum of a given 
-    function. Furthermore it will hold functionality to evaluate the performance of the optimization 
-    algorithm on benchmark-/testfunctions.
+    This class manages and updates the swarm and surrogate instances. It is designed to be used from 
+    the outside of the package to find the global optimum of a given function. It holds some functionalities
+    to monitor an optimization during its runtime with a table that is iteratively updated and to illustrate
+    the optimization after it is finished using convergence plots for the global best and the mean and
+    standard deviation of the personal bests of the swarm.
+
+    Attributes:
+        options: A dict containing all options which can be set for the optimization
+        func: The function to be optimized
+        n_particles: The number of particles in the swarm
+        dim: The dimension of the search-space
+        max_iter: A integer value which determines the maximum amount of iterations in an 
+                optimization call
+        max_func_evals: The maximum amount of function evaluations in an optimization call
+        Swarm: A swarm instance which is used for the PSO, refer to the documentation of this
+            class for further information
+        SurrogateModel: a surrogate instance which is used in the PSO, refer to the 
+            documentation of this class for further information (Only if the use_surrogate
+            option is set to be True) 
+        current_prediction: The last point that was proposed by the surrogate (Only 
+            necessary for surrogate prediction modes center_of_gravity and 
+            shifting_center)
+        worst_idx: The particle index at which a proposed point is stored (Only for
+            standard surrogate prediction mode)
+        worst_indices: The particle indices at which proposed points are stored
+            (Only for standard_m surrogate prediction mode)
+        other_indices: The particle indices that complement worst_indices (Only for
+            standard_m surrogate prediction mode)
     """
 
     def __init__(self, func, n_particles, dim, constr, max_iter, max_func_evals=None, **kwargs):
         """Creates and initializes an optimizer class instance.
 
         This function creates all class attributes which are necessary for an optimization process.
-        It creates a Swarm instance which will be used in the optimization. Furthermore it creates
-        some arrays which improve the computation time for the enforcing of the constraints.
+        It creates a Swarm instance which will be used in the optimization.
 
         Args:
-            func: The function whose global optimum is to be determined
-            n_particles: The amount of particles which is used in the swarm
+            func: The function to be optimized
+            n_particles: The number of particles in the swarm
             dim: The dimension of the search-space
             constr: The constraints of the search-space with shape (dim, 2)
             max_iter: A integer value which determines the maximum amount of iterations in an 
                 optimization call
-            options: Options for the optimizer and swarm
+            max_func_evals: The maximum amount of function evaluations in an optimization call
+            **kwargs: The remaining keywords constitute the options which differ from the 
+                default values, alternatively one can insert and options dict with **options
+                (This options dict does not need to be complete).
         """
-        # default options
         self.options = self._fetch_default_options()
         self._update_options(kwargs)
         
@@ -191,7 +215,7 @@ class Optimizer():
             results['term_flag'] = 1
 
         if self.options['verbose']:
-            print(tp.bottom(len(self.headers), width=20))
+            print(tp.bottom(len(self._headers), width=20))
             print('\n')
 
         if self.options['do_plots']:
@@ -275,15 +299,15 @@ class Optimizer():
             pprint.pprint(self.options)
             print()
 
-            self.headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
-            print(tp.header(self.headers, width=20))
+            self._headers = ['idx', 'gbest', 'mean_pbest', 'var_pbest']
+            print(tp.header(self._headers, width=20))
 
         if idx % self.options['verbose_interval'] == 0:
             mean_pbest = np.mean(self.Swarm.pbest)
             var_pbest = np.var(self.Swarm.pbest)
 
             data = [idx, gbest, mean_pbest, var_pbest]
-            assert len(data) == len(self.headers)
+            assert len(data) == len(self._headers)
 
             print(tp.row(data, width=20))
 

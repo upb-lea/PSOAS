@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imageio
 
+
 def random_hypersphere_draw(r, dim):
     """Uniform sampling from dim-dimensional hyperspheres.
 

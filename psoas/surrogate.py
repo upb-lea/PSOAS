@@ -1,6 +1,4 @@
-"""
-TODO: Docstring
-"""
+"""Implementation of the Surrogate class for the Particle Swarm Optimization (PSO)."""
 
 import numpy as np
 import plotly.graph_objects as go
