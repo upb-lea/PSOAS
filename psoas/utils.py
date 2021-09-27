@@ -2,8 +2,20 @@ import numpy as np
 
 
 def random_hypersphere_draw(r, dim):
-    """
-    TODO: docstring
+    """Uniform sampling from dim-dimensional hyperspheres.
+
+    The goal is to sample a dim-dimensional array for each particle. One sample is
+    drawn uniformly from a hypersphere where the radius corresponds to one element of r.
+    The exact explanation can be found in the paper Völker2017
+    (doi: 10.13140/RG.2.2.15829.01767/1).
+
+    Args:
+        r: Array of shape (n_particles,) containing the different radii
+        dim: The dimension of the search-space
+
+    Returns:
+        u: Array of shape (n_particles, dim) uniformly drawn samples from a
+            dim-dimensional hypersphere
     """
     u = np.random.normal(size=(r.shape[0], dim+2))
     u_norm = np.linalg.norm(u, axis=1)
@@ -13,6 +25,19 @@ def random_hypersphere_draw(r, dim):
 
 
 def calc_max_iter(max_f_eval, n_particles):
+    """Calculate the maximum interations.
+
+    For some applications, a fixed bugdet of functions evaluations must
+    be considered. This function calculates the maximum possible iterations
+    given the budget and the number of particles.
+    
+    Args:
+        max_f_eval: Maximum number of function evaluations
+        n_particles: The number of particles used in the swarm
+
+    Returns:
+        max_iter: Maximum number of interations
+    """
     max_iter = np.floor((max_f_eval - n_particles)/n_particles)
     return max_iter.astype('int')
 
