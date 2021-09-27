@@ -170,7 +170,7 @@ class Optimizer():
                 results["n_fun_eval_list"].append(self.func.eval_count)
 
             if self.options['swarm_options']['3d_plot']:
-                self.Swarm.plotter()
+                self.Swarm._plotter()
 
             if self.options['verbose']:
                 self.print_iteration_information(i, gbest)
@@ -197,7 +197,7 @@ class Optimizer():
             self.plot_results(results)
 
         if self.options['swarm_options']['create_gif']:
-            self.Swarm.create_gif()
+            self.Swarm._create_gif()
         
         results['mean_pbest'] = np.mean(self.Swarm.pbest)
         results['var_pbest'] = np.var(self.Swarm.pbest)

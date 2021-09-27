@@ -140,7 +140,7 @@ class Surrogate():
 
     def get_prediction_point(self, constr):
         """
-        Searches the minimum of the surogate based on the constraints of the search space.
+        Searches the minimum of the surrogate based on the constraints of the search space.
 
         Args:
             constr: Constraints of the search space with shape (???)
