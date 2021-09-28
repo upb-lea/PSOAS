@@ -12,22 +12,34 @@ class Surrogate():
 
     The class includes all functions related to the surrogate. Basically, a model is
     generated on the basis of the sampled points and their function values, on which
-    a predicted optimum is then determined.
+    a proposed optimum is then determined. To obtain a more narrow basis of data points 
+    (e.g. for a local fit), a ringbuffer can be used.
+    
 
     Attributes:
         surrogate_options: Dict containing options that belong to the surrogate
-        init_position:
-        init_f_vals:
+        sm: A surrogate model instance which is used to approximate the function based
+            on the given data points
+        dim: The dimension of the search-space
+        n_particles: The number of particles in the swarm
+        positions: All positions of the particles which have been encountered so far.
+            For each iteration an array of shape (n_particles, dim) is concatened, if
+            there is no filtering.
+        f_vals: All function values of the particles which have been encountered so far.
+            For each iteration an array of shape (n_particles, 1) is concatened, if
+            there is no filtering.
+        surrogate_memory: A instance of the ring buffer for the surrogate
+            (Only if a buffer is selected)
     """
 
     def __init__(self, init_position, init_f_vals, surrogate_options=None):
-        """
-        Creates and initializes a surrogate class instance.
+        """ Creates and initializes a surrogate class instance.
 
         Args:
-            init_position: The initial positions as array for the creation of a
-                model (n, dim)
-            init_f_vals: The initial function values for the creation of a model (n,)
+            init_position: Initial positions for the construction of the surrogate
+                model as array of shape (n, dim)
+            init_f_vals: Initial function values for the construction of the surrogate
+                model as array of shape (n,)
             surrogate_options: Dict with which the method of the surrogate is selected
         """
         self.surrogate_options = surrogate_options
@@ -65,10 +77,12 @@ class Surrogate():
         self.sm.updateModel(init_position, init_f_vals[:, None], None, None)
 
     def fit_model(self, curr_positions, curr_f_vals):
-        """
-        This implementation creates a surrogate model based on the stored data points
-        and the current data points provided by the PSO. This should help to ensure that
-        the surrogate is very accurate in the neighborhood of the currently sampled points.
+        """Fitting a surrogate model based on the given datapoints.
+
+        This implementation fits a surrogate model based on the stored data points
+        and the current data points provided by the PSO. The latter should help to ensure
+        that the surrogate is very accurate in the neighborhood of the currently
+        sampled points.
 
         Args:
             curr_positions: The positions of the current swarm particles as array
@@ -83,14 +97,17 @@ class Surrogate():
         self.sm.updateModel(input_positions, input_f_vals[:, None], None, None)
 
     def update_data(self, curr_positions, curr_f_vals, do_filtering, mean=0, std=1, rho=1.15):
-        """
+        """Updates the data of the surrogate model.
+
         The update of the surrogate data can be performed with a filtering,
         checking if a data point is informative. Otherwise, all data points are
         included in the model.
 
         Args:
-            curr_positions: The position of the current swarm particles with shape (n, dim)
-            curr_f_vals: The function values of the current swarm particles with shape (n,)
+            curr_positions: The positions of the current swarm particles as array
+                with shape (n_particles, dim)
+            curr_f_vals: The function values of the current swarm particles as array
+                with shape (n_particles,)
             do_filtering: Boolean for the filtering of the data points
         """
         if do_filtering:
@@ -113,8 +130,9 @@ class Surrogate():
         self.f_vals = self.f_vals[idx]
     
     def fit_model_buffer(self):
-        """
-        TODO:Docstring
+        """Fitting the surrogate model based on the data points of the buffer.
+
+        The data basis for the surrogate model is fetched from the buffer instance.
         """
         input_positions, input_f_vals = self.surrogate_memory.fetch()
         input_positions, idx = np.unique(input_positions, return_index=True, axis=0)
@@ -124,6 +142,9 @@ class Surrogate():
 
     def update_data_buffer(self, curr_positions, curr_f_vals):
         """Function for updating the data buffer.
+
+        Store the current positions and corresponding function values of the swarm
+        in the buffer instance.
 
         Args:
             curr_positions: The positions of the current swarm particles as array
@@ -135,12 +156,19 @@ class Surrogate():
         self.surrogate_memory.store(curr_positions, curr_f_vals[:, None])
 
     def predict(self, positions):
-        """Predicts an optimum.
+        """Predicts the function value for a given position.
 
         Args:
-            positions:
+            positions: The positions of the current swarm particles as array
+                with shape (n_particles, dim)
+
+        Returns:
+            predicted_mean: Predicted mean of the given position (positions, 1)
+            predicted_std: Predicted standard deviation of the given position (positions, 1)
         """
-        assert positions.shape[1] == (self.dim), ("The dimension of the positions does \
+
+        assert positions.shape[1] == (self.dim), (
+            "The dimension of the positions does \
             not match with the dimension of the model. " \
             f"Expect dimension {self.dim}, got {positions.shape[1]}")
 
@@ -148,16 +176,16 @@ class Surrogate():
         return predicted_mean, predicted_std
 
     def update_surrogate(self, positions, f_vals):
-        """
-        This function handles the update of the surrogate by estimating mean and std
-        for the incoming PSO data points, then creating a new model based on the
-        surrogate's data points and the PSO's current data points, and then updating
-        the data while checking if the new point have an influcence on the surrogate
-        model.
+        """Managing the updates for the diffrent memories of the surrogate model.
+
+        This function handles the update of the surrogate. A new surrogate model
+        is fitted on the basis of positions and functions values.
 
         Args:
-            positions:
-            f_vals:
+            positions: An array of positions with which a new surrogate model is to
+                be fitted
+            f_vals: An array of function values with which a new surrogate model is to
+                be fitted
         """
         if self.surrogate_options['use_buffer']:
             self.update_data_buffer(positions, f_vals)
@@ -169,15 +197,16 @@ class Surrogate():
             self.update_data(positions, f_vals, True, mean, std)
 
     def get_proposition_point(self, constr):
-        """ Searches the minimum of the surrogate based on the constraints of the search space.
+        """Searches the minimum of the surrogate model.
+
+        To obtain a proposed point, a local minimum of the surrogate model must first be found.
 
         Args:
             constr: Constraints of the search space with shape (dim, 2)
 
         Returns:
-            proposition: proposition optimum with shape (1, dim)
-            pos_proposition:
-            f_val_proposition:
+            pos_proposition: Proposed position by the acquisition function (1, dim)
+            f_val_proposition: Proposed function value by the acquisition function
         """
         mixed_domain = []
 
@@ -196,22 +225,22 @@ class Surrogate():
             acquisition = GPyOpt.acquisitions.AcquisitionEI_MCMC(self.sm, space, acquisition_optimizer)
 
         pos_proposition, f_val_proposition = acquisition.optimize()
-        return pos_proposition, f_val_proposition
+        return pos_proposition, f_val_proposition[0][0]
 
     def use_standard_m_proposition(self, Swarm):
-        """Applies the standard m algortihm which iteratively predicts m candidates using
+        """Applies the standard m algorthim which iteratively predicts m candidates using
         the surrogate and replaces the worst m swarm elements with these points.
 
         Args:
-            Swarm:
+            Swarm: Instance of the Swarm 
 
         Returns:
-            worst_indices:
-            other_indices:
-
+            worst_indices: Indices of the worst m particles
+            other_indices: Indices of the particles excluding the worst m particles
         """
         m = self.surrogate_options['m']
 
+        # sort the pbest of the swarm and get the worst m particles
         worst_indices = np.argsort(Swarm.pbest)[-m:][::-1]
         other_indices = np.argsort(Swarm.pbest)[:-m][::-1]
 
