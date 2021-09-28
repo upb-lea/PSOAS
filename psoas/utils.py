@@ -144,8 +144,8 @@ class TimeDataBuffer:
 
         If the data buffer is fully filled one could also directly access the position_buffer
         and f_val_buffer, but as long as the buffer is not fully filled this function will 
-        only return valid values while direct access will return the zeros with which empty 
-        slots are initialized.
+        only return valid values, while direct access will return the zeros empty slots are 
+        initialized with.
 
         Returns:
             postions: Array of shape (n_slots * n_particles, dim) containing the
@@ -159,14 +159,37 @@ class TimeDataBuffer:
 
 
 class ValueDataBuffer:
+    """Implementation of the value data buffer.
+    
+    This class implements a ringbuffer that holds the best positions that were found in 
+    the optimization process. Whenever a set of new positions is evaluated during the
+    optimization, it is checked if any of the points improves upon the data in this 
+    buffer and only if it does it is added to the buffer and it replaces the worst
+    element.
+
+    Attributes:
+        position_buffer: Array of shape (buffer_size, dim) containing the
+            best buffer_size positions found so far
+        f_val_buffer: Array of shape (buffer_size, 1) containing the function
+            values of the best buffer_size positions found so far
+    """
     def __init__(self, dim, buffer_size):
+        """Creates and initializes a value buffer instance.
+
+        Args:
+            dim: The dimension of the search-space
+            buffer_size: The number of positions and function values the buffer can hold
+        """
         self.position_buffer = np.zeros((buffer_size, dim), dtype=np.float32)
         self.f_val_buffer = np.zeros((buffer_size, 1), dtype=np.float32)
-        self.ptr = 0
-        self.size = 0
-        self.max_size = buffer_size
+        self._ptr = 0
+        self._size = 0
+        self._max_size = buffer_size
     
     def store(self, positions, f_vals):
+        """Checks if any of the data points is better than the values currently stored
+        in the buffer and where applicable replaces these values in the buffer.
+        """
         length = positions.shape[0]        
 
         for i in range(length):
@@ -178,11 +201,11 @@ class ValueDataBuffer:
             
             # if the buffer is not full yet, the new point is added 
             # regardless of its value
-            if self.size < self.max_size:
-                self.position_buffer[self.ptr] = positions[i]
-                self.f_val_buffer[self.ptr] = f_vals[i]
-                self.ptr += 1
-                self.size += 1
+            if self._size < self._max_size:
+                self.position_buffer[self._ptr] = positions[i]
+                self.f_val_buffer[self._ptr] = f_vals[i]
+                self._ptr += 1
+                self._size += 1
             
             # if the buffer is full, check if the new point is better
             # than the current worst point 
@@ -194,8 +217,21 @@ class ValueDataBuffer:
                     self.f_val_buffer[idx_max] = f_vals[i]
     
     def fetch(self):
-        positions = self.position_buffer[:self.size]
-        f_vals = self.f_val_buffer[:self.size]
+        """Fetches the positions and corresponding function values.
+
+        If the data buffer is fully filled one could also directly access the position_buffer
+        and f_val_buffer, but as long as the buffer is not fully filled this function will 
+        only return valid values, while direct access will return the zeros empty space in 
+        the buffer is initialized with.
+
+        Returns:
+            postions: Array of shape (buffer_size, dim) containing the positions of the 
+                buffer
+            f_vals: Array of shape (buffer_size, 1) containing the function values of the 
+                buffer
+        """
+        positions = self.position_buffer[:self._size]
+        f_vals = self.f_val_buffer[:self._size]
         return positions, f_vals
 
 
