@@ -322,14 +322,8 @@ class Optimizer():
         return results
     
     def update_swarm(self):
-        """Updates the Swarm instance.
+        """Updates the Swarm instance. See the swarm documentation for more details."""
 
-        The velocity update for the swarm is calculated here and the positions of all
-        particles in the swarm are updated using this new velocity. The constraints are
-        enforced by returning any particle which left the valid search space, back into
-        it. Lastly, the personal best point for each particle is updated, if the function
-        value at the new location is better than the previous personal best position.
-        """
         if not self.options['surrogate_options']['use_surrogate']:
             self.Swarm.update()
         else:
@@ -348,7 +342,7 @@ class Optimizer():
 
     def use_surrogate_proposition(self):
         """
-        This function handles the different proposition methods.
+        This function handles the different surrogate proposition methods.
         """
         if self.options['surrogate_options']['proposition_mode'] == 'standard':
             pos_proposition, f_val_proposition = self.SurrogateModel.get_proposition_point(self.Swarm.constr)
@@ -383,6 +377,10 @@ class Optimizer():
             return False
 
     def print_iteration_information(self, idx, gbest):
+        """Prints some information about the optimization, such as the current iteration
+        index, the current global best of the swarm, the mean of the personal bests and 
+        the variance of the personal bests.
+        """
         if idx == 0:
             print('\n', 'Options:')
             pprint.pprint(self.options)
@@ -401,6 +399,9 @@ class Optimizer():
             print(tp.row(data, width=20))
 
     def plot_results(self, results):
+        """Plots the global and the mean + standard deviation of the personal best
+        over the number of function evaluations.
+        """
         gbest = np.array(results['gbest_list'])
         mean_pbest = np.array(results['mean_pbest_list'])
         var_pbest = np.array(results['var_pbest_list'])
