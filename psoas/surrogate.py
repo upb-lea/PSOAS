@@ -22,12 +22,8 @@ class Surrogate():
             on the given data points
         dim: The dimension of the search-space
         n_particles: The number of particles in the swarm
-        positions: All positions of the particles which have been encountered so far.
-            For each iteration an array of shape (n_particles, dim) is concatened, if
-            there is no filtering.
-        f_vals: All function values of the particles which have been encountered so far.
-            For each iteration an array of shape (n_particles, 1) is concatened, if
-            there is no filtering.
+        positions: Default memory for the positions which have been encountered so far.
+        f_vals: Default memory for the function values which have been encountered so far.
         surrogate_memory: A instance of the ring buffer for the surrogate
             (Only if a buffer is selected)
     """
@@ -77,12 +73,12 @@ class Surrogate():
         self.sm.updateModel(init_position, init_f_vals[:, None], None, None)
 
     def fit_model(self, curr_positions, curr_f_vals):
-        """Fitting a surrogate model based on the given datapoints.
+        """Function that fits the surrogate model.
 
-        This implementation fits a surrogate model based on the stored data points
-        and the current data points provided by the PSO. The latter should help to ensure
+        This implementation fits a surrogate model based on the previous positions and
+        function values as also the current data points. The latter should help to ensure
         that the surrogate is very accurate in the neighborhood of the currently
-        sampled points.
+        sampled positions.
 
         Args:
             curr_positions: The positions of the current swarm particles as array
@@ -99,9 +95,9 @@ class Surrogate():
     def update_data(self, curr_positions, curr_f_vals, do_filtering, mean=0, std=1, rho=1.15):
         """Updates the data of the surrogate model.
 
-        The update of the surrogate data can be performed with a filtering,
-        checking if a data point is informative. Otherwise, all data points are
-        included in the model.
+        Default data memory is updated by this function. This can be done with
+        filtering to check, if a data point is informative. Otherwise, all data
+        points are used for the surrogate model.
 
         Args:
             curr_positions: The positions of the current swarm particles as array
@@ -144,7 +140,7 @@ class Surrogate():
         """Function for updating the data buffer.
 
         Store the current positions and corresponding function values of the swarm
-        in the buffer instance.
+        in the buffer.
 
         Args:
             curr_positions: The positions of the current swarm particles as array
@@ -156,15 +152,14 @@ class Surrogate():
         self.surrogate_memory.store(curr_positions, curr_f_vals[:, None])
 
     def predict(self, positions):
-        """Predicts the function value for a given position.
+        """Predicts the function value for a given positions.
 
         Args:
-            positions: The positions of the current swarm particles as array
-                with shape (n_particles, dim)
+            positions: The positions from which we want to predict the function value
 
         Returns:
-            predicted_mean: Predicted mean of the given position (positions, 1)
-            predicted_std: Predicted standard deviation of the given position (positions, 1)
+            predicted_mean: Predicted mean of the given position
+            predicted_std: Predicted standard deviation of the given position
         """
 
         assert positions.shape[1] == (self.dim), (
@@ -176,10 +171,11 @@ class Surrogate():
         return predicted_mean, predicted_std
 
     def update_surrogate(self, positions, f_vals):
-        """Managing the updates for the diffrent memories of the surrogate model.
+        """Managing the updates of the surrogate model.
 
         This function handles the update of the surrogate. A new surrogate model
-        is fitted on the basis of positions and functions values.
+        is fitted on the basis of positions and functions values either withe the default
+        memory or a buffer.
 
         Args:
             positions: An array of positions with which a new surrogate model is to
@@ -197,9 +193,11 @@ class Surrogate():
             self.update_data(positions, f_vals, True, mean, std)
 
     def get_proposition_point(self, constr):
-        """Searches the minimum of the surrogate model.
+        """Returns a proposed point.
 
-        To obtain a proposed point, a local minimum of the surrogate model must first be found.
+        Given the surrogate model and the constraints of the search-space a acquisition
+        function is constructed. To obtain a proposed point, a local minimum of the
+        acquisition function must be determined. This is done via an optimizer.
 
         Args:
             constr: Constraints of the search space with shape (dim, 2)
