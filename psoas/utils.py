@@ -1,11 +1,11 @@
 """Collection of basic utility functions and classes."""
 
 import os
+import shutil
 
 import numpy as np
 import matplotlib.pyplot as plt
 import imageio
-import shutil
 
 
 def random_hypersphere_draw(r, dim):
