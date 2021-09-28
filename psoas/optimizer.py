@@ -47,6 +47,85 @@ class Optimizer():
             (Only for standard_m surrogate proposition mode)
         other_indices: The particle indices that complement worst_indices (Only for
             standard_m surrogate proposition mode)
+    
+    -------------------------------------------------------------------------------------
+    Possible options:
+        eps_abs: Absolute change in personal bests which has to be undercut from one
+            iteration to the next for termination (the value has to be undercut 
+            stalling_steps number of times in a row)
+        eps_rel: Relative change in personal bests which has to be undercut from one
+            iteration to the next for termination (the value has to be undercut 
+            stalling_steps number of times in a row)
+        stalling_steps: Number of iteration in a row where the eps_abs or eps_rel has
+            to be undercut for termination
+        verbose: A boolean which determines if the options dict and tables should be 
+            printed during the optimization
+        verbose_interval: An integer which determines how often the table is updated
+        do_plots: A boolean which determines if plots should be shown at the end of
+            the optimization
+
+        swarm_options: A dict containing a number of options regarding the swarm
+            mode: Sets the mode for the velocity update, one of 'SPSO2011' and 'MSPSO2011'
+            topology: Sets the swarm topology, one of 'global', 'adaptive_random' and 'ring'
+            contour_plot: A boolean which determines if a contour plot should be shown during
+                the optimization (WARNING: Needs some initial computation time)
+            create_gif: A boolean which determines if the contour plot should be saved as a
+                gif (Only possible if a contour_plot is generated).
+    
+        surrogate_options: A dict containing a number of options regarding the surrogate
+            surrogate_type: Sets the type of surrogate more specifically the acquisition 
+                function, one of 'GP', 'GP_MPI' and 'GP_MCMC'. 'GP' uses the standard 
+                gaussian process form GPyOpt and the Expected Improvement (EI) acquisition
+                function. 'GP_MPI' uses the gaussian process and the Maximum Probabilty of 
+                Improvement (MPI) acquisition function. 'GP_MCMC' uses EI but the MCMC
+                version of the gaussian process (see GPyOpt documentation for more
+                information).
+            use_surrogate: A boolean which determines if a surrogate is used
+            use_buffer: A boolean which determines if a ring-buffer based memory should be
+                used for the surrogate
+            buffer_type: If a ring-buffer is used, decides what kind that is. Either 'time'
+                or 'value'. See their implementation/documentation in psoas/utils.py for
+                more detailed information
+            n_slots: An interger which decides how much data fits into the buffer. For each
+                slot, one iteration can be stored.
+            3d_plot: Creates a surface plot of the surrogate mean and variance (Only usable 
+                for function dimension = 2)
+            interval: Determines how often the 3d_plot is shown
+            m: Number of surrogate propositions per iteration for the standard_m surrogate
+                proposition approach
+            proposition_mode: Sets the proposition mode for the surrogate, one of 'standard',
+                'standard_m', 'center_of_gravity' and 'shifting_center'. As one can see in the
+                benchmarking results, it is generally adviseable to stick with the standard 
+                and standard_m approaches, since the other two are highly experimental and did
+                not perform particularly well
+            prioritization: A parameter for the shifting center surrogate proposition approach.
+                If the parameter is at 0, the surrogate has no influence on the optimization.
+                With growing prioritization the influence of the surrogate on the result 
+                grows.
+            
+        default_options:
+            {'eps_abs': 0.0,
+             'eps_rel': 0.0,
+             'stalling_steps': 10,
+             'verbose': False,
+             'verbose_interval': 1,
+             'do_plots': False,
+             'swarm_options': {'mode': 'SPSO2011', 
+                               'topology': 'global',
+                               'contour_plot': False,
+                               'create_gif': False},
+             'surrogate_options': {'surrogate_type': 'GP',
+                                   'use_surrogate': True,
+                                   'use_buffer': True,
+                                   'buffer_type': 'time',
+                                   'n_slots': 4,
+                                   '3d_plot': False,
+                                   'interval': 1,
+                                   'm': 5,
+                                   'proposition_mode': 'standard',
+                                   'prioritization': 0.2}
+            }
+    -------------------------------------------------------------------------------------
     """
 
     def __init__(self, func, n_particles, dim, constr, max_iter, max_func_evals=None, **kwargs):
@@ -54,7 +133,7 @@ class Optimizer():
 
         This function creates all class attributes which are necessary for an
         optimization process. It creates a Swarm instance which will be used in the
-        optimization.
+        optimization and possibly a surrogate instance.
 
         Args:
             func: The function to be optimized
@@ -133,6 +212,8 @@ class Optimizer():
                 raise NameError(f'The key "{key}" does not exist in the dict.')
 
     def _options_checker(self):
+        """Ensures that certain options are properly parameterized."""
+
         if self.options['surrogate_options']['use_surrogate']:
             if self.options['surrogate_options']['proposition_mode'] == 'standard_m':
                 assert self.options['surrogate_options']['m'] <= self.n_particles, (
@@ -141,14 +222,17 @@ class Optimizer():
     def optimize(self):
         """Main optimization routine.
 
-        The swarm is updated until the maximum number of iteration is reached or the
-        termination condition is reached.
+        The swarm is updated until the maximum number of iteration is reached or a
+        termination condition is reached. If the corresponding options are set, a 
+        surrogate model is used to find optimum candidates in the search space and
+        thus speed up the convergence.
 
         Returns:
             A result dict, which holds the function value and position of the presumed
             global optimum, a list containing the function value history of the presumed
             global optimum per iteration, the amount of iterations used in the
-            optimization process.
+            optimization process and some more statistical information about the 
+            optimization.
         """
         small_change_counter = 0
 
