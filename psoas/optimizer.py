@@ -52,16 +52,17 @@ class Optimizer():
     def __init__(self, func, n_particles, dim, constr, max_iter, max_func_evals=None, **kwargs):
         """Creates and initializes an optimizer class instance.
 
-        This function creates all class attributes which are necessary for an optimization process.
-        It creates a Swarm instance which will be used in the optimization.
+        This function creates all class attributes which are necessary for an
+        optimization process. It creates a Swarm instance which will be used in the
+        optimization.
 
         Args:
             func: The function to be optimized
             n_particles: The number of particles in the swarm
             dim: The dimension of the search-space
             constr: The constraints of the search-space with shape (dim, 2)
-            max_iter: A integer value which determines the maximum amount of iterations in an 
-                optimization call
+            max_iter: A integer value which determines the maximum amount of iterations
+                in an optimization call
             max_func_evals: The maximum amount of function evaluations in an optimization call
             **kwargs: The remaining keywords constitute the options which differ from the 
                 default values, alternatively one can insert and options dict with **options
@@ -119,7 +120,8 @@ class Optimizer():
             if type(value) is dict:
                 for inner_key, inner_value in value.items():
                     if inner_key not in self.options[key]:
-                        raise NameError(f'The key "{inner_key}" does not exist in the dict.')
+                        raise NameError(
+                            f'The key "{inner_key}" does not exist in the dict.')
                     
                     else:
                         self.options[key][inner_key] = inner_value
@@ -133,18 +135,20 @@ class Optimizer():
     def _options_checker(self):
         if self.options['surrogate_options']['use_surrogate']:
             if self.options['surrogate_options']['proposition_mode'] == 'standard_m':
-                assert self.options['surrogate_options']['m'] <= self.n_particles, 'm must be less than or equal to the number of particles.'
+                assert self.options['surrogate_options']['m'] <= self.n_particles, (
+                    'm must be less than or equal to the number of particles.')
 
     def optimize(self):
         """Main optimization routine.
 
-        The swarm is updated until the maximum number of iteration is reached or the termination 
-        condition is reached.
+        The swarm is updated until the maximum number of iteration is reached or the
+        termination condition is reached.
 
         Returns:
-            A result dict, which holds the function value and position of the presumed global optimum,
-            a list containing the function value history of the presumed global optimum per iteration,
-            the amount of iterations used in the optimization process.
+            A result dict, which holds the function value and position of the presumed
+            global optimum, a list containing the function value history of the presumed
+            global optimum per iteration, the amount of iterations used in the
+            optimization process.
         """
         small_change_counter = 0
 
@@ -221,7 +225,8 @@ class Optimizer():
         if self.options['do_plots']:
             self.plot_results(results)
 
-        if self.options['swarm_options']['contour_plot'] and self.options['swarm_options']['create_gif']:
+        if (self.options['swarm_options']['contour_plot'] and
+            self.options['swarm_options']['create_gif']):
             self.Swarm.swarm_plotter.create_gif()
         
         results['mean_pbest'] = np.mean(self.Swarm.pbest)
@@ -235,11 +240,11 @@ class Optimizer():
     def update_swarm(self):
         """Updates the Swarm instance.
 
-        The velocity update for the swarm is calculated here and the positions of all particles
-        in the swarm are updated using this new velocity. The constraints are enforced by returning 
-        any particle which left the valid search space, back into it. Lastly, the personal best 
-        point for each particle is updated, if the function value at the new location is better than
-        the previous personal best position.
+        The velocity update for the swarm is calculated here and the positions of all
+        particles in the swarm are updated using this new velocity. The constraints are
+        enforced by returning any particle which left the valid search space, back into
+        it. Lastly, the personal best point for each particle is updated, if the function
+        value at the new location is better than the previous personal best position.
         """
         if not self.options['surrogate_options']['use_surrogate']:
             self.Swarm.update()

@@ -110,7 +110,9 @@ class Swarm():
             return self._topology_adaptive_random()
 
         else:
-            raise ValueError(f"Expected global, ring or adaptive random for the topology. Got {self.options['topology']}")
+            raise ValueError(
+                "Expected global, ring or adaptive random for the topology. " \
+                f"Got {self.options['topology']}")
 
     def update(self, current_proposition=None, worst_idx=None, worst_indices=None, other_indices=None):
         """Performs one iterative update step for the Swarm.
@@ -192,7 +194,9 @@ class Swarm():
             self._velocity_update_MSPSO2011()
 
         else:
-            raise ValueError(f"Expected SPSO2011 or MSPSO2011 for the swarm mode. Got {self.options['mode']}")
+            raise ValueError(
+                "Expected SPSO2011 or MSPSO2011 for the swarm mode. "\
+                f"Got {self.options['mode']}")
 
     def enforce_constraints(self, check_position, check_velocity):
         """Enforces the constraints of the valid search space.
