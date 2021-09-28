@@ -12,17 +12,18 @@ def random_hypersphere_draw(r, dim):
     """Uniform sampling from dim-dimensional hyperspheres.
 
     The goal is to sample a dim-dimensional array for each particle. One sample is
-    drawn uniformly from a hypersphere where the radius corresponds to one element of r.
-    The exact explanation can be found in the paper Voelker2017
+    drawn uniformly from a hypersphere where the radius corresponds to one element 
+    of r. A detailed explanation can be found in the paper Voelker2017
     (doi: 10.13140/RG.2.2.15829.01767/1).
 
     Args:
-        r: Array of shape (n_particles,) containing the different radii
+        r: Array of shape (n_particles,) containing the different radii, one for 
+            each particle
         dim: The dimension of the search-space
 
     Returns:
-        u: Array of shape (n_particles, dim) uniformly drawn samples from a
-            dim-dimensional hypersphere
+        u: Samples with shape (n_particles, dim) drawn uniformly from a dim-dimensional 
+            hypersphere
     """
     u = np.random.normal(size=(r.shape[0], dim+2))
     u_norm = np.linalg.norm(u, axis=1)
@@ -32,11 +33,13 @@ def random_hypersphere_draw(r, dim):
 
 
 def calc_max_iter(max_f_eval, n_particles):
-    """Calculate the maximum interations.
+    """Calculate the maximum iterations as a function of the maximum function evaluations.
 
-    For some applications, a fixed budget of functions evaluations must
-    be considered. This function calculates the maximum possible iterations
-    given the budget and the number of particles.
+    For some applications, a fixed budget of functions evaluations must be considered. 
+    This function calculates the maximum possible iterations given the budget and the 
+    number of particles. It is ensured that the number of actual function evaluation 
+    does not exceed the given budget, even if that means that the budget is not used
+    completely.
     
     Args:
         max_f_eval: Maximum number of function evaluations
@@ -50,6 +53,12 @@ def calc_max_iter(max_f_eval, n_particles):
 
 
 class counting_function():
+    """The given function is extendend such that the number of function calls is counted.
+
+    Attributes:
+        eval_count: Number of function evaluations
+        function: The actual function which is wrapped by this class
+    """
     def __init__(self, function):
         self.eval_count = 0
         self.function = function
@@ -60,6 +69,16 @@ class counting_function():
 
 
 class counting_function_cec2013_single(counting_function):
+    """Specific extension to the counting_function. It takes array-like inputs of shape
+    (N, dimension) and calculates the function for each of the N rows. Naturally the
+    function counter is incremented by N. This is helpful for functions that can not
+    deal with array-like inputs such as the cec2013 test functions on which this 
+    optimizer was benchmarked.
+
+    Attributes:
+        eval_count: Number of function evaluations
+        function: The actual function which is wrapped by this class
+    """
     def __call__(self, x):
         length = x.shape[0]
         self.eval_count += length
@@ -74,13 +93,13 @@ class TimeDataBuffer:
     """Implementation of the time data buffer.
 
     This class implements a ringbuffer that works according to the first in, first out
-    (FIFO) principle. The positions and associated function values are stored for each
-    iteration, where the number of iterations can be set.
+    (FIFO) principle. The positions and associated function values are stored in one
+    slot, while the number of slots can be set.
 
     Attributes:
-        position_buffer: Array of shape ((n_slots * n_particles), dim) containing the
+        position_buffer: Array of shape (n_slots * n_particles, dim) containing the
             positions of the last n_slots-iterations
-        f_val_buffer: Array of shape ((n_slots * n_particles, 1) containing the function
+        f_val_buffer: Array of shape (n_slots * n_particles, 1) containing the function
             values of the last n_slots-iterations
 
     """
@@ -90,7 +109,8 @@ class TimeDataBuffer:
         Args:
             dim: The dimension of the search-space
             n_particles: The number of particles used in the swarm
-            n_slots: The number of slots used for storage
+            n_slots: The number of slots used for storage, one slot contains the data of
+                one iteration
         """
 
         self.position_buffer = np.zeros((n_slots * n_particles, dim), dtype=np.float32)
@@ -103,9 +123,11 @@ class TimeDataBuffer:
     def store(self, positions, f_vals):
         """Store the positions and corresponding function values.
 
+        The data of one iteration is given to the buffer and the oldest data is replaced
+        with this new data.
+
         Args:
-            positions: The positions of the particles in dim-dimensional space with
-            shape (n_particles, dim)
+            positions: The positions of the particles in with shape (n_particles, dim)
             f_vals: The function values of the particles with shape (n_particles, 1)
         """
         start = self._ptr * self._n_particles
@@ -118,14 +140,18 @@ class TimeDataBuffer:
         self._size = min(self._size + 1, self._max_size)
     
     def fetch(self):
-        """Fetch the positions and corresponding function values.
+        """Fetches the positions and corresponding function values.
+
+        If the data buffer is fully filled one could also directly access the position_buffer
+        and f_val_buffer, but as long as the buffer is not fully filled this function will 
+        only return valid values while direct access will return the zeros with which empty 
+        slots are initialized.
 
         Returns:
-            postions: Array of shape ((n_slots * n_particles), dim) containing the
+            postions: Array of shape (n_slots * n_particles, dim) containing the
                 positions of the buffer
-            f_vals: Array of shape ((n_slots * n_particles), 1) containing the
+            f_vals: Array of shape (n_slots * n_particles, 1) containing the
                 function values of the buffer
-
         """
         positions = self.position_buffer[:self._size*self._n_particles]
         f_vals = self.f_val_buffer[:self._size*self._n_particles]
