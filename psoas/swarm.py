@@ -346,7 +346,8 @@ class Swarm():
         update_neighbors = self.no_change_in_gbest
 
         if (not hasattr(self, 'neighbors')) or update_neighbors:
-            self.neighbors = np.random.rand(self.n_particles, self.n_particles).argpartition(n_neighbors, axis=1)[:,:n_neighbors]
+            self.neighbors = np.random.rand(self.n_particles, self.n_particles).argpartition(n_neighbors,
+                                                                                             axis=1)[:,:n_neighbors]
             self.neighbors = np.concatenate((np.arange(0, self.n_particles)[:, None], self.neighbors), axis=1)
 
         informed_particles = np.zeros((self.n_particles, self.n_particles))
