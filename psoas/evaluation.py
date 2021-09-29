@@ -75,14 +75,16 @@ class EvaluationSingle(Evaluation):
             keys.insert(3, 'diff_opt_value')
         self._create_dataframe(keys, n_runs)
         for i in tqdm(range(n_runs), disable=disable_tqdm):
-            try:
-                res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, max_func_evals, options)
-            except np.linalg.LinAlgError:
-                counter += 1
-                i = i-1
-                if counter > 200:
-                    raise RuntimeError(f'Tried more than {counter}')
-                continue
+            error = True
+            while error:
+                try:
+                    res = self._optimize_function(self.func, n_particles, dim, self.constr, max_iter, max_func_evals, options)
+                    error = False
+                except np.linalg.LinAlgError:
+                    counter += 1
+                    error = True
+                    if counter > 200:
+                        raise RuntimeError(f'Tried more than {counter}')
             self.df.loc[i, 'n_iter'] = res['iter']
             self.df.loc[i, 'n_fun_evals'] = res['n_fun_evals']
             self.df.loc[i, 'term_flag'] = res['term_flag']
