@@ -276,11 +276,12 @@ class Surrogate():
         Swarm.enforce_constraints(check_position=True, check_velocity=False)
         return worst_indices, other_indices
 
-    def plotter_3d(self):
-        """
-        For the 2-dimensional case, a 3-dimensional plot is created, which contains
-        the surrogate with the current data points. In addition, the predicted variance
-        is plotted in a further plot.
+    def plot_surrogate(self):
+        """Plotting the surrogate model.
+
+        For the 2-dimensional case, a 3-dimensional plot is created, which contains the
+        predicted surrogate model with the current data points. In addition, the variance
+        for each point is shown in another 3-dimensional plot.
         """
         assert self.dim == 2, f'Expect dimension to be 2! Got {self.dim}.'
         num = 100
