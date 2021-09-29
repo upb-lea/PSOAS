@@ -300,7 +300,7 @@ class Surrogate():
         print(80 * "*")
 
         fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_mean_reshaped)])
-        #fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_vals, mode='markers'))
+        fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_vals, mode='markers'))
         fig.show()
 
         fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_var_reshaped)])

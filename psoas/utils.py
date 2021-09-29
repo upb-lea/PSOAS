@@ -314,4 +314,3 @@ class SwarmPlotter:
         for filename in set(self._gif_filenames):
             os.remove(f'{self._tmp_path}/{filename}')
         os.rmdir(self._tmp_path)
-

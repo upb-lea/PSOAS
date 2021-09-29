@@ -257,7 +257,7 @@ class Optimizer():
                     self.SurrogateModel.update_surrogate(self.Swarm.positions, self.Swarm.f_values)
 
                 if self.options['surrogate_options']['3d_plot']:
-                    self.SurrogateModel.plot_surface()
+                    self.SurrogateModel.plot_surrogate()
 
                 self.use_surrogate_proposition()
 
