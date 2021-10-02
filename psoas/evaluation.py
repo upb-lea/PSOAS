@@ -176,20 +176,6 @@ class EvaluationSingle(Evaluation):
         super().plot_histogram(self.df.to_dict(), key)
 
 
-class EvaluationHyperparameters(Evaluation):    
-    """
-    TODO: docstring
-
-    One function, multiple runs, different hyperparameters
-    """
-
-    def __init__(self):
-        pass
-
-    def evaluate_function():
-        raise NotImplementedError
-
-
 class EvaluationFunctionSet(Evaluation):
     """
     TODO: docstring
