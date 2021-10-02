@@ -1,9 +1,11 @@
 """Implementation of the optimizer class for the Particle Swarm Optimization. This class functions as the
-optimizer and manager for the swarm and surrogate.
+optimizer and manager for the swarm and surrogate. The given function is minimized in the standard application.
 
 Typical usage example:
     opt = Optimizer(func, n_particles, dimension, constraints, max_iter)
     result = opt.optimize()
+
+See the corresponding jupyter notebook for more detailed examples.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -257,7 +259,7 @@ class Optimizer():
                     self.SurrogateModel.update_surrogate(self.Swarm.positions, self.Swarm.f_values)
 
                 if self.options['surrogate_options']['3d_plot']:
-                    self.SurrogateModel.plotter_3d()
+                    self.SurrogateModel.plotter_3d(self.Swarm.constr)
 
                 self.use_surrogate_proposition()
 

@@ -236,7 +236,7 @@ class ValueDataBuffer:
 
 
 class SwarmPlotter:
-    def __init__(self, func):
+    def __init__(self, func, constr):
         """Generates contours for the current function which are used to create a plot 
         and possibly a gif of the swarm moving over the function (Only usable for 
         dimension=2).
@@ -247,13 +247,17 @@ class SwarmPlotter:
         array inputs are possible for your function, it might be helpful to replace the
         for loop with an array operation.
         """
-        data_plot = {}
-        delta = 0.1
-        B = np.arange(-100, 100, delta)
-        data_plot['x'] = B
-        data_plot['y'] = B
+        self.constr = constr
 
-        xx, yy = np.meshgrid(B,B, sparse=True)
+        data_plot = {}
+        num = 1000
+
+        x = np.linspace(self.constr[0, 0], self.constr[0, 1], num)
+        y = np.linspace(self.constr[1, 0], self.constr[1, 1], num)
+        data_plot['x'] = x
+        data_plot['y'] = y
+
+        xx, yy = np.meshgrid(x,y, sparse=True)
         data_plot['z'] = np.zeros((xx.shape[1], yy.shape[0]))
 
         for i in range(xx.shape[1]):
@@ -284,8 +288,8 @@ class SwarmPlotter:
         plt.quiver(positions[:, 0], positions[:, 1], velocities[:, 0], velocities[:, 1], 
                    units='xy', scale_units='xy', scale=1)
 
-        plt.xlim((-100, 100))
-        plt.ylim((-100, 100))
+        plt.xlim((self.constr[0, 0], self.constr[0, 1]))
+        plt.ylim((self.constr[1, 0], self.constr[1, 1]))
 
         plt.xlabel("x")
         plt.ylabel("y")
