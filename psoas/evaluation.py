@@ -24,6 +24,10 @@ class Evaluation():
 
     def _optimize_function(self, func, n_particles, dim, constr, max_iter, max_func_evals, options=None):
         opt = Optimizer(func, n_particles, dim, constr, max_iter, max_func_evals, **options)
+        
+        if self.eval_convergence_plot:
+            opt.options['eval_convergence_plot'] = True
+
         return opt.optimize()
 
     def print_tables(self):
@@ -66,7 +70,9 @@ class EvaluationSingle(Evaluation):
         if opt_value is not None:
             self.opt_value = opt_value
 
-    def evaluate_function(self, n_particles, dim, max_iter, max_func_evals, options, n_runs, disable_tqdm=False):
+    def evaluate_function(self, n_particles, dim, max_iter, max_func_evals, options, n_runs, 
+                          eval_convergence_plot=False, disable_tqdm=False):
+
         keys = ['n_iter', 'n_fun_evals', 'term_flag', 'func_opt', 'mean_pbest', 'var_pbest']
         counter = 0
         if hasattr(self, 'ground_truth'):
@@ -74,6 +80,9 @@ class EvaluationSingle(Evaluation):
         if hasattr(self, 'opt_value'):
             keys.insert(3, 'diff_opt_value')
         self._create_dataframe(keys, n_runs)
+
+        self.eval_convergence_plot = eval_convergence_plot
+
         for i in tqdm(range(n_runs), disable=disable_tqdm):
             error = True
             while error:
@@ -91,6 +100,23 @@ class EvaluationSingle(Evaluation):
             self.df.loc[i, 'func_opt'] = res['func_opt']
             self.df.loc[i, 'mean_pbest'] = res['mean_pbest']
             self.df.loc[i, 'var_pbest'] = res['var_pbest']
+
+            # prepare averaged convergence plots
+            if self.eval_convergence_plot:
+                if not hasattr(self, 'gbest_list'):
+                    self.counting_run = 1
+                    self.gbests = np.array(res['gbest_list'])
+                    self.mean_pbests = np.array(res['mean_pbest_list'])
+                    self.var_pbests = np.array(res['var_pbest_list'])
+                    self.n_fun_evals = np.array(res['n_fun_eval_list'])
+
+                else:
+                    self.gbests = self.gbests + np.array(res['gbest_list']) * self.counting_run / (self.counting_run + 1)
+                    self.mean_pbests = self.mean_pbests + np.array(res['mean_pbest_list']) * self.counting_run / (self.counting_run + 1)
+                    self.var_pbests = self.var_pbests + np.array(res['var_pbest_list']) * self.counting_run / (self.counting_run + 1)
+                    self.n_fun_evals = self.n_fun_evals + np.array(res['n_fun_eval_list']) * self.counting_run / (self.counting_run + 1)
+                    self.counting_run += 1
+
             if 'dist_gt' in self.df.keys():
                 assert self.ground_truth.shape == res['x_opt'].shape
                 self.df.loc[i, 'dist_gt'] = np.linalg.norm(res['x_opt']- self.ground_truth)
@@ -98,6 +124,23 @@ class EvaluationSingle(Evaluation):
                 self.df.loc[i, 'diff_opt_value'] = res['func_opt'] - self.opt_value
         if counter > 0:
             print(f'Repeats for function: {counter}')
+
+    def plot_convergence(self):
+        assert self.eval_convergence_plot, 'The data for the convergence plots has to be prepared during the optimizations.'
+        
+        fig, axs = plt.subplots(nrows=2, sharex=True, figsize=(12,12))
+
+        axs[0].plot(self.n_fun_evals, self.gbests, color='orange')
+        axs[0].set_ylabel('averaged gbest fval')
+
+        axs[1].plot(self.n_fun_evals, self.mean_pbests, color='tab:blue')
+        axs[1].fill_between(self.n_fun_evals, self.mean_pbests - np.sqrt(self.var_pbests), 
+                            self.mean_pbests + np.sqrt(self.var_pbests), color='tab:blue', alpha=0.2)
+
+        axs[1].set_ylabel('averaged mean +- std pbest fval')
+        axs[1].set_xlabel('function evaluations')
+
+        fig.show()
         
     def get_statistical_information(self):
         mean_iters = np.mean(self.df['n_iter'])

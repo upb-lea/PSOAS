@@ -212,6 +212,9 @@ class Optimizer():
             
             else:
                 raise NameError(f'The key "{key}" does not exist in the dict.')
+        
+        # option is only used for the evaluation framework and it then set manually
+        self.options['eval_convergence_plot'] = False
 
     def _options_checker(self):
         """Ensures that certain options are properly parameterized."""
@@ -240,7 +243,7 @@ class Optimizer():
 
         results = {"iter": None}
 
-        if self.options['do_plots']:
+        if self.options['do_plots'] or self.options['eval_convergence_plot']:
             results["gbest_list"] = []
             results["mean_pbest_list"] = []
             results["var_pbest_list"] = []
@@ -277,7 +280,7 @@ class Optimizer():
             else:
                 small_change_counter = 0
             
-            if self.options['do_plots']:
+            if self.options['do_plots'] or self.options['eval_convergence_plot']:
                 results['gbest_list'].append(gbest)
                 results['mean_pbest_list'].append(np.mean(self.Swarm.pbest))
                 results['var_pbest_list'].append(np.var(self.Swarm.pbest))
