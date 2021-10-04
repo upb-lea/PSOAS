@@ -68,7 +68,7 @@ class Swarm():
         if self.swarm_options['contour_plot'] is True:
             assert self.dim == 2, f'Got dim {self.dim}. Expected dim = 2.'
 
-            self.swarm_plotter = SwarmPlotter(self.func)
+            self.swarm_plotter = SwarmPlotter(self.func, self.constr)
 
     def _calculate_initial_values(self):
         """Calculates initial values for positions, function values and velocities.

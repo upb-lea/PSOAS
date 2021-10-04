@@ -277,17 +277,19 @@ class Surrogate():
         Swarm.enforce_constraints(check_position=True, check_velocity=False)
         return worst_indices, other_indices
 
-    def plot_surrogate(self):
-        """Plotting the surrogate model.
+    def plotter_3d(self, constr):
+        """Plots the predicted mean and variance from the surrogate.
 
-        For the 2-dimensional case, a 3-dimensional plot is created, which contains the
-        predicted surrogate model with the current data points. In addition, the variance
-        for each point is shown in another 3-dimensional plot.
+        For the 2-dimensional case, a 3-dimensional plot is created, which shows
+        the predicted surrogate model with the current data points. The predicted 
+        variance is shown in another 3-dimensional plot.
         """
         assert self.dim == 2, f'Expect dimension to be 2! Got {self.dim}.'
         num = 100
-        axis = np.linspace(-100, 100, num)
-        x, y = np.meshgrid(axis, axis)
+
+        axis_x = np.linspace(constr[0, 0], constr[0, 1], num)
+        axis_y = np.linspace(constr[1, 0], constr[1, 1], num)
+        x, y = np.meshgrid(axis_x, axis_y)
 
         x = x.flatten()
         y = y.flatten()
@@ -299,10 +301,17 @@ class Surrogate():
         predict_var_reshaped = np.reshape(predict_var, (num, num))
 
         print(80 * "*")
-        fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_mean_reshaped)])
-        fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_vals, mode='markers'))
+
+        fig = go.Figure(data=[go.Surface(x=axis_x, y=axis_y, z=predict_mean_reshaped)])
+        # fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_vals, mode='markers'))
+        fig.update_layout(scene=dict(zaxis_title='Predicted Mean'),
+                                     width=700,
+                                     margin=dict(r=20, b=10, l=10, t=10))
         fig.show()
 
-        fig = go.Figure(data=[go.Surface(x=axis, y=axis, z=predict_var_reshaped)])
+        fig = go.Figure(data=[go.Surface(x=axis_x, y=axis_y, z=predict_var_reshaped)])
+        fig.update_layout(scene=dict(zaxis_title='Predicted Variance'),
+                                     width=700,
+                                     margin=dict(r=20, b=10, l=10, t=10))
         fig.show()
         print(80 * "*")

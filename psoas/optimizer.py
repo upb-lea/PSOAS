@@ -1,9 +1,11 @@
 """Implementation of the optimizer class for the Particle Swarm Optimization. This class functions as the
-optimizer and manager for the swarm and surrogate.
+optimizer and manager for the swarm and surrogate. The given function is minimized in the standard application.
 
 Typical usage example:
     opt = Optimizer(func, n_particles, dimension, constraints, max_iter)
     result = opt.optimize()
+
+See the corresponding jupyter notebook for more detailed examples.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -210,6 +212,9 @@ class Optimizer():
             
             else:
                 raise NameError(f'The key "{key}" does not exist in the dict.')
+        
+        # option is only used for the evaluation framework and it then set manually
+        self.options['eval_convergence_plot'] = False
 
     def _options_checker(self):
         """Ensures that certain options are properly parameterized."""
@@ -238,7 +243,7 @@ class Optimizer():
 
         results = {"iter": None}
 
-        if self.options['do_plots']:
+        if self.options['do_plots'] or self.options['eval_convergence_plot']:
             results["gbest_list"] = []
             results["mean_pbest_list"] = []
             results["var_pbest_list"] = []
@@ -257,7 +262,7 @@ class Optimizer():
                     self.SurrogateModel.update_surrogate(self.Swarm.positions, self.Swarm.f_values)
 
                 if self.options['surrogate_options']['3d_plot']:
-                    self.SurrogateModel.plot_surrogate()
+                    self.SurrogateModel.plotter_3d(self.Swarm.constr)
 
                 self.use_surrogate_proposition()
 
@@ -275,7 +280,7 @@ class Optimizer():
             else:
                 small_change_counter = 0
             
-            if self.options['do_plots']:
+            if self.options['do_plots'] or self.options['eval_convergence_plot']:
                 results['gbest_list'].append(gbest)
                 results['mean_pbest_list'].append(np.mean(self.Swarm.pbest))
                 results['var_pbest_list'].append(np.var(self.Swarm.pbest))
