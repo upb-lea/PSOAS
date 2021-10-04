@@ -230,11 +230,12 @@ class Surrogate():
         the surrogate and replaces the worst m swarm elements with these points.
 
         Args:
-            Swarm: Instance of the Swarm 
+            Swarm: A swarm instance which is used for the PSO, refer to the documentation of this
+                class for further information
 
         Returns:
-            worst_indices: Indices of the worst m particles
-            other_indices: Indices of the particles excluding the worst m particles
+            worst_indices: The particle indices at which proposed points are stored
+            other_indices: The particle indices that complement worst_indices
         """
         m = self.surrogate_options['m']
 
