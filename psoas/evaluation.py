@@ -103,7 +103,7 @@ class EvaluationSingle(Evaluation):
 
             # prepare averaged convergence plots
             if self.eval_convergence_plot:
-                if not hasattr(self, 'gbest_list'):
+                if not hasattr(self, 'gbests'):
                     self.counting_run = 1
                     self.gbests = np.array(res['gbest_list'])
                     self.mean_pbests = np.array(res['mean_pbest_list'])
@@ -111,10 +111,10 @@ class EvaluationSingle(Evaluation):
                     self.n_fun_evals = np.array(res['n_fun_eval_list'])
 
                 else:
-                    self.gbests = self.gbests + np.array(res['gbest_list']) * self.counting_run / (self.counting_run + 1)
-                    self.mean_pbests = self.mean_pbests + np.array(res['mean_pbest_list']) * self.counting_run / (self.counting_run + 1)
-                    self.var_pbests = self.var_pbests + np.array(res['var_pbest_list']) * self.counting_run / (self.counting_run + 1)
-                    self.n_fun_evals = self.n_fun_evals + np.array(res['n_fun_eval_list']) * self.counting_run / (self.counting_run + 1)
+                    self.gbests = (self.gbests * self.counting_run + np.array(res['gbest_list']))  / (self.counting_run + 1)
+                    self.mean_pbests = (self.mean_pbests * self.counting_run + np.array(res['mean_pbest_list']))  / (self.counting_run + 1)
+                    self.var_pbests = (self.var_pbests * self.counting_run + np.array(res['var_pbest_list']))  / (self.counting_run + 1)
+                    self.n_fun_evals = (self.n_fun_evals * self.counting_run + np.array(res['n_fun_eval_list'])) / (self.counting_run + 1)
                     self.counting_run += 1
 
             if 'dist_gt' in self.df.keys():

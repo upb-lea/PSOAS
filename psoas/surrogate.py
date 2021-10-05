@@ -283,7 +283,7 @@ class Surrogate():
         the predicted surrogate model with the current data points. The predicted 
         variance is shown in another 3-dimensional plot.
         """
-        assert self.dim == 2, f'Expect dimension to be 2! Got {self.dim}.'
+        assert self.dim == 2, f'Expected dimension to be 2! Got {self.dim} instead.'
         num = 100
 
         axis_x = np.linspace(constr[0, 0], constr[0, 1], num)
@@ -303,13 +303,13 @@ class Surrogate():
 
         fig = go.Figure(data=[go.Surface(x=axis_x, y=axis_y, z=predict_mean_reshaped)])
         # fig.add_trace(go.Scatter3d(x=self.positions[:,0], y=self.positions[:,1], z=self.f_vals, mode='markers'))
-        fig.update_layout(scene=dict(zaxis_title='Predicted Mean'),
+        fig.update_layout(scene=dict(zaxis_title='predicted mean'),
                                      width=700,
                                      margin=dict(r=20, b=10, l=10, t=10))
         fig.show()
 
         fig = go.Figure(data=[go.Surface(x=axis_x, y=axis_y, z=predict_var_reshaped)])
-        fig.update_layout(scene=dict(zaxis_title='Predicted Variance'),
+        fig.update_layout(scene=dict(zaxis_title='predicted variance'),
                                      width=700,
                                      margin=dict(r=20, b=10, l=10, t=10))
         fig.show()
