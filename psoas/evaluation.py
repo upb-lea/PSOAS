@@ -10,19 +10,24 @@ from psoas.optimizer import Optimizer
 
 
 class Evaluation():
-    """
-    TODO: docstring
+    """Base class for the evaluation classes.
+
+    Implements basic functions for the other evaluation classes.
     """
     def __init__(self):
         pass
 
-    def _create_dataframe(self, keys, height):
+    def _create_dataframe(self, keys, length):
+        """Creates a pandas data frame with the given keys and length."""
+
         data_dict = {}
         for key in keys:
-            data_dict[key] = np.zeros(height)
+            data_dict[key] = np.zeros(length)
         self.df = pd.DataFrame.from_dict(data_dict)
 
     def _optimize_function(self, func, n_particles, dim, constr, max_iter, max_func_evals, options=None):
+        """Creates a PSOAS optimizer instance and uses it to optimize the given function."""
+
         opt = Optimizer(func, n_particles, dim, constr, max_iter, max_func_evals, **options)
         
         if self.eval_convergence_plot:
@@ -38,6 +43,8 @@ class Evaluation():
     
     @staticmethod
     def plot_percentiles(data, key):
+        """Plots a percentiles plot for the given data and key."""
+
         y_data = np.fromiter(data[key].values(), dtype=np.float)
         x_data = np.linspace(0, 100, 1000)
         percentile = np.percentile(y_data, x_data)
@@ -48,6 +55,8 @@ class Evaluation():
     
     @staticmethod
     def plot_histogram(data, key):
+        """Plots a histogram plot for the given data and key."""
+
         y_data = np.fromiter(data[key].values(), dtype=np.float)
         plt.hist(y_data, bins=100)
         plt.xlabel('bins')
