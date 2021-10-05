@@ -65,13 +65,20 @@ class Evaluation():
 
 
 class EvaluationSingle(Evaluation):
-    """
-    TODO: docstring
-
-    One function, multiple runs, statistical information 
+    """Evaluates a given function by optimizing it a set number of times and calculating
+    statistical information from the runs.
     """
 
     def __init__(self, func, constr, ground_truth=None, opt_value=None):
+        """Initializes the single function evaluation.
+        
+        Args:
+            func: The function to be optimized
+            constr: The constraints of the search-space with shape (dim, 2)
+            ground_truth: (optional) The position of the optimum
+            opt_value: (optional) The function value of the optimal position.
+                Is necessary for some statistical information
+        """
         self.func = func
         self.constr = constr
         if ground_truth is not None:
@@ -81,7 +88,21 @@ class EvaluationSingle(Evaluation):
 
     def evaluate_function(self, n_particles, dim, max_iter, max_func_evals, options, n_runs, 
                           eval_convergence_plot=False, disable_tqdm=False):
+        """Repeatedly optimizes the function and stores the results for further analysis.
 
+        Args:
+            n_particles: The number of particles in the swarm
+            dim: The dimension of the search-space
+            max_iter: A integer value which determines the maximum amount of iterations
+                in an optimization call
+            max_func_evals: The maximum amount of function evaluations in an optimization call
+            options: A dict containing all options which can be set for the optimization
+            n_runs: The number of times the optimization is repeated
+            eval_convergence_plots: A boolean which determines if the convergence data should be
+                averaged and stored throughout the runs
+            disable_tqdm: A boolean which determines if tqdm should be disabled (True: no tqdm, 
+                False: tqdm is used)
+        """
         keys = ['n_iter', 'n_fun_evals', 'term_flag', 'func_opt', 'mean_pbest', 'var_pbest']
         counter = 0
         if hasattr(self, 'ground_truth'):
@@ -135,6 +156,10 @@ class EvaluationSingle(Evaluation):
             print(f'Repeats for function: {counter}')
 
     def plot_convergence(self):
+        """Plots the gbest averaged over all runs and the mean and standard deviations of
+        the personal bests on the ordinate of two subplots respectively. They are plotted
+        in regard to the function evaluations which are shown on the abscissa.
+        """
         assert self.eval_convergence_plot, 'The data for the convergence plots has to be prepared during the optimizations.'
         
         fig, axs = plt.subplots(nrows=2, sharex=True, figsize=(12,12))
@@ -152,6 +177,8 @@ class EvaluationSingle(Evaluation):
         fig.show()
         
     def get_statistical_information(self):
+        """Averages and sums up the data gathered throughout all of the runs."""
+        
         mean_iters = np.mean(self.df['n_iter'])
         mean_fun_evals = np.mean(self.df['n_fun_evals'])
         mean = np.mean(self.df['func_opt'])
@@ -160,20 +187,24 @@ class EvaluationSingle(Evaluation):
         max = np.max(self.df['func_opt'])
         median = np.median(self.df['func_opt'])
         std = np.std(self.df['func_opt'])
-
-        diff = self.df['func_opt'] - self.opt_value
-
-        mean_diff = np.mean(diff)
-        var_diff = np.var(diff)
-        min_diff = np.min(diff)
-        max_diff = np.max(diff)
         
-    
-        stats_dict = {'min': min,'median': median, 'mean': mean, 'max': max, 'std': std,
-                      'var': var, 'mean_iters': mean_iters, 'mean_fun_evals': mean_fun_evals,
-                      'min_diff': min_diff, 'mean_diff': mean_diff, 'max_diff': max_diff,   
-                      'var_diff': var_diff}
-    
+        if hasattr(self, 'opt_value'):
+            diff = self.df['func_opt'] - self.opt_value
+
+            mean_diff = np.mean(diff)
+            var_diff = np.var(diff)
+            min_diff = np.min(diff)
+            max_diff = np.max(diff)
+
+            stats_dict = {'min': min,'median': median, 'mean': mean, 'max': max, 'std': std,
+                        'var': var, 'mean_iters': mean_iters, 'mean_fun_evals': mean_fun_evals,
+                        'min_diff': min_diff, 'mean_diff': mean_diff, 'max_diff': max_diff,   
+                        'var_diff': var_diff}
+        
+        else:
+            stats_dict = {'min': min,'median': median, 'mean': mean, 'max': max, 'std': std,
+                        'var': var, 'mean_iters': mean_iters, 'mean_fun_evals': mean_fun_evals}
+
         for key in stats_dict.keys():
             stats_dict[key] = np.round(stats_dict[key], 5)
         return stats_dict
@@ -186,13 +217,21 @@ class EvaluationSingle(Evaluation):
 
 
 class EvaluationFunctionSet(Evaluation):
-    """
-    TODO: docstring
-
-    Multiple functions, (multiple? runs)
-    """
 
     def evaluate_functions(self, bench, n_particles, dim, max_iter, max_func_evals, options, n_runs):
+        """Goes through all the functions of the CEC2013 benchmark, repeatedly optimizes them and gathers the results.
+        The results for each function are averaged and summed up along the runs.
+
+        Args:
+            bench: An instance of the CEC2013 benchmark class
+            n_particles: The number of particles in the swarm
+            dim: The dimension of the search-space
+            max_iter: A integer value which determines the maximum amount of iterations
+                in an optimization call
+            max_func_evals: The maximum amount of function evaluations in an optimization call
+            options: A dict containing all options which can be set for the optimization
+            n_runs: The number of times the optimization is repeated
+        """
         self.n_particles = n_particles
         self.dim = dim
         self.max_iter = max_iter
