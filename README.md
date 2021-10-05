@@ -1,5 +1,5 @@
 # Installing PSOAS
-- Download or clone the repository (git clone git@github.com:upb-lea/PSOAS.git)
+- Download or clone the repository (``git clone git@github.com:upb-lea/PSOAS.git``)
 - Go to the PSOAS directory and run: ``python setup.py build_ext --inplace``
 
 ## Installing CEC-2013 to use it in the evaluation framework
