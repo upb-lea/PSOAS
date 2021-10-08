@@ -277,8 +277,8 @@ class Surrogate():
                 self.sm.updateModel(tmp_positions, tmp_f_vals, None, None)
 
             else:
-                self.update_surrogate(self.Swarm.positions[worst_indices[i]][None, :], 
-                                      np.atleast_1d(self.Swarm.f_values[worst_indices[i]]))
+                self.update_surrogate(Swarm.positions[worst_indices[i]][None, :], 
+                                      np.atleast_1d(Swarm.f_values[worst_indices[i]]))
 
         Swarm.enforce_constraints(check_position=True, check_velocity=False)
         return worst_indices, other_indices
