@@ -11,7 +11,6 @@ notebooks/
 .ipynb_checkpoints
 __pycache__/
 report.log
-notebooks/
 
 #Evaluation
 evalset

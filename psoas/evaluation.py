@@ -114,6 +114,9 @@ class EvaluationSingle(Evaluation):
         self.eval_convergence_plot = eval_convergence_plot
 
         for i in tqdm(range(n_runs), disable=disable_tqdm):
+            # Here, a special error that occurred only on one server is caught during evaluation.
+            # This problem could not be investigated further within the scope of our project work.
+            # Seams to be a problem with GPyOpt and this specific server.
             error = True
             while error:
                 try:
