@@ -1,7 +1,7 @@
 # Installing PSOAS
 - Download or clone the repository (``git clone git@github.com:upb-lea/PSOAS.git``)
-- Fetch the requirements: ``python -m pip install -r requirements.txt`` (``numpy`` and ``Cython`` have to be preinstalled for the ``smt`` installation)
-- Go to the PSOAS directory and run: ``python -m pip install -e .``
+- Go to the PSOAS directory and fetch the requirements: ``python -m pip install -r requirements.txt`` (``numpy`` and ``Cython`` have to be preinstalled for the ``smt`` installation)
+- Afterwards run: ``python -m pip install -e .``
 
 ## Installing CEC-2013 to use it in the evaluation framework
 - Download from https://github.com/yyamnk/cec2013single or ``git clone git@github.com:yyamnk/cec2013single.git``
