@@ -7,10 +7,11 @@ the article [Directed particle swarm optimization with Gaussian-process-based fu
 
 ## Installing PSOAS
 - Download or clone the repository (``git clone git@github.com:upb-lea/PSOAS.git``)
-- Go to the PSOAS directory and run: ``python setup.py build_ext --inplace``
-- A usage example can be found at https://github.com/upb-lea/PSOAS/blob/master/notebooks/example_usage_optimizer.ipynb
+- Go to the PSOAS directory and fetch the requirements: ``python -m pip install -r requirements.txt`` (``numpy`` and ``Cython`` have to be preinstalled for the ``smt`` installation)
+- Afterwards run: ``python -m pip install -e .``
 
 ## Installing CEC-2013 to use it in the evaluation framework
+(only needed for testing with the CEC-2013 benchmark)
 - Download from https://github.com/yyamnk/cec2013single or ``git clone git@github.com:yyamnk/cec2013single.git``
 - Go to cec2013single/cec2013single/cec2013_func.c line 91
 - Insert the absolute path to cec2013_data (e.g.: PATH-TO-DIR/cec2013single/cec2013single/cec2013_data)
