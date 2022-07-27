@@ -22,7 +22,7 @@ the article [Directed particle swarm optimization with Gaussian-process-based fu
 ## Citing
 Please use the following BibTeX entry for citing us:
 
-    @Misc{MVSW2021,
+    @online{MVSW2021,
       author = {Marvin Meyer and Hendrik Vater and Maximilian Schenke and Oliver Wallscheid},
       note   = {Paderborn University},
       title  = {Particle Swarm Optimization Assisted by Surrogates},
